@@ -1,0 +1,20 @@
+{
+  "name": "EatWithMe — food map cho nhóm bạn",
+  "short_name": "EatWithMe",
+  "description": "Lưu, khám phá và chia sẻ những quán ăn đáng nhớ.",
+  "lang": "vi-VN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f2e9",
+  "theme_color": "#e55d42",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
