@@ -25,6 +25,7 @@ Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để �
 ## Những gì đã có trong MVP
 
 - Khám phá với search input, kết quả gần bạn và bản đồ trực quan dạng mock.
+- Bản đồ tương tác Leaflet/OpenStreetMap, marker cho các quán đã lưu và định vị thiết bị bằng Geolocation API.
 - Place detail với địa chỉ, rating, trạng thái mở cửa và giờ đóng cửa.
 - Lưu/bỏ lưu quán, persistence bằng `localStorage`.
 - Bộ sưu tập, filter “đang mở”, tạo collection mới.
@@ -32,6 +33,12 @@ Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để �
 - Bạn bè, activity feed, lời mời và hộp thư.
 - Chia sẻ một quán cho nhiều bạn bè.
 - Responsive mobile layout, keyboard focus và reduced-motion support.
+
+### Lưu ý về vị trí và bản đồ
+
+- Trình duyệt sẽ hỏi quyền vị trí khi mở màn hình Khám phá; nút “Định vị tôi” cho phép thử lại.
+- Geolocation cần `localhost` hoặc HTTPS. Khi mở trên điện thoại bằng IP nội bộ dạng `http://192.168...`, bản đồ vẫn có thể xem nhưng trình duyệt có thể chặn vị trí.
+- Bản đồ dùng tile OpenStreetMap qua Leaflet và có attribution; production nên kiểm tra chính sách tile/traffic phù hợp.
 
 ## Nối backend thật
 

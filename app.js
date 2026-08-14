@@ -18,6 +18,8 @@ const ICONS = {
 const places = [
   {
     id: "bun-cha-huong-lien",
+    lat: 21.0209,
+    lng: 105.8490,
     name: "Bún chả Hương Liên",
     category: "Món Việt · bún chả",
     address: "24 Lê Văn Hưu, Hai Bà Trưng",
@@ -32,6 +34,8 @@ const places = [
   },
   {
     id: "pizza-4ps-trang-tien",
+    lat: 21.0258,
+    lng: 105.8540,
     name: "Pizza 4P’s Tràng Tiền",
     category: "Pizza · Ý hiện đại",
     address: "43 Tràng Tiền, Hoàn Kiếm",
@@ -46,6 +50,8 @@ const places = [
   },
   {
     id: "lac-cafe",
+    lat: 21.0252,
+    lng: 105.8546,
     name: "Lạc Cà Phê",
     category: "Cà phê · yên tĩnh",
     address: "12 Ngõ Tràng Tiền, Hoàn Kiếm",
@@ -60,6 +66,8 @@ const places = [
   },
   {
     id: "quan-an-ngon",
+    lat: 21.0243,
+    lng: 105.8419,
     name: "Quán Ăn Ngon",
     category: "Món Việt · gia đình",
     address: "18 Phan Bội Châu, Hoàn Kiếm",
@@ -74,6 +82,8 @@ const places = [
   },
   {
     id: "bep-me-in",
+    lat: 21.0290,
+    lng: 105.8540,
     name: "Bếp Mẹ Ỉn",
     category: "Món Việt · cơm nhà",
     address: "136 Hàng Trống, Hoàn Kiếm",
@@ -82,6 +92,7 @@ const places = [
     closes: "22:00",
     rating: "4.7",
     color: "taco",
+    pin: "p5",
     description: "Mâm cơm nhà miền Nam, nhiều rau thơm và phần ăn vừa đủ để gọi thêm món.",
     hours: "10:30 – 22:00",
   },
@@ -121,6 +132,16 @@ const state = {
     { id: "want", name: "Muốn thử", count: 1 },
     { id: "visited", name: "Đã ăn rồi", count: 1 },
   ],
+};
+
+const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
+const mapState = {
+  instance: null,
+  userMarker: null,
+  userPosition: null,
+  savedMarkers: new Map(),
+  leafletPromise: null,
+  hasLocatedUser: false,
 };
 
 function readStorage(key, fallback) {
@@ -241,8 +262,20 @@ function renderStats() {
   return `<section class="stat-row"><div class="stat-card"><div><div class="stat-value">${state.saved.length}</div><div class="stat-label">quán đã lưu</div></div><div class="stat-trend">+2 tháng này</div></div><div class="stat-card"><div><div class="stat-value">4</div><div class="stat-label">người bạn</div></div><div class="stat-trend">+1 mới</div></div><div class="stat-card"><div><div class="stat-value">7</div><div class="stat-label">lời rủ rê</div></div><div class="stat-trend">đang chờ bạn</div></div></section>`;
 }
 
-function renderMap() {
+function renderMockMapLegacy() {
   return `<section class="panel map-panel"><div class="map-toolbar"><button class="map-chip active">Gần bạn</button><button class="map-chip">Đang mở</button></div><div class="map-surface">${places.slice(0, 4).map((place) => `<button class="map-pin ${place.pin} ${state.modal?.placeId === place.id ? "selected" : ""}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div><div class="map-legend"><span class="legend-dot"></span>Quán đang mở <span class="legend-dot herb"></span>Bạn bè đã lưu</div></section>`;
+}
+
+function renderMapFallback() {
+  const savedPlaces = places.filter((place) => isSaved(place.id));
+  return `<div id="map-fallback" class="map-fallback hidden"><div class="map-surface">${savedPlaces.map((place) => `<button class="map-pin ${place.pin}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div></div>`;
+}
+
+// This definition intentionally sits after the original mock-map function.
+// Function declarations are hoisted; the latest one is used by renderExplore.
+function renderMap() {
+  const savedCount = places.filter((place) => isSaved(place.id)).length;
+  return `<section class="panel map-panel" data-map-shell><div class="map-toolbar"><button class="map-chip active">Đã lưu · ${savedCount}</button><button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button></div><div id="leaflet-map" class="leaflet-map" aria-label="Bản đồ các quán đã lưu"></div>${renderMapFallback()}<div id="map-location-caption" class="map-location-caption">Đang chuẩn bị bản đồ tương tác…</div><div class="map-legend"><span class="legend-dot"></span>Quán đã lưu <span class="legend-dot herb"></span>Vị trí của bạn</div></section>`;
 }
 
 function renderActivity() {
@@ -292,6 +325,153 @@ function renderApp() {
   document.querySelector("#app").innerHTML = `<div class="app-shell">${renderSidebar()}<main class="main">${renderTopbar()}<div id="page-content">${renderMain()}</div></main>${renderMobileTabbar()}</div>`;
   bindAppEvents();
   renderModal();
+  if (state.view === "explore") window.setTimeout(initInteractiveMap, 0);
+}
+
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (mapState.leafletPromise) return mapState.leafletPromise;
+
+  mapState.leafletPromise = new Promise((resolve, reject) => {
+    if (!document.querySelector("link[data-leaflet-css]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.dataset.leafletCss = "true";
+      document.head.appendChild(link);
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async = true;
+    script.onload = () => resolve(window.L);
+    script.onerror = () => reject(new Error("Leaflet could not be loaded"));
+    document.head.appendChild(script);
+  });
+
+  return mapState.leafletPromise;
+}
+
+function mapPopupHtml(place) {
+  return `<div class="map-popup"><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.address)}</span>${statusLabel(place)}<button class="map-popup-button" data-action="open-place" data-place-id="${place.id}">Mở chi tiết ${icon("arrow")}</button></div>`;
+}
+
+function updateMapCaption(message) {
+  const caption = document.querySelector("#map-location-caption");
+  if (caption) caption.textContent = message;
+}
+
+function showMapFallback(message) {
+  document.querySelector("#leaflet-map")?.classList.add("hidden");
+  document.querySelector("#map-fallback")?.classList.remove("hidden");
+  updateMapCaption(message);
+}
+
+function savedMarkerIcon(L) {
+  return L.divIcon({
+    className: "eatwithme-marker-wrap",
+    html: '<span class="eatwithme-marker saved-marker">●</span>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -26],
+  });
+}
+
+function userMarkerIcon(L) {
+  return L.divIcon({
+    className: "eatwithme-marker-wrap",
+    html: '<span class="eatwithme-marker user-marker"><span></span></span>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
+function buildInteractiveMap(L) {
+  const element = document.querySelector("#leaflet-map");
+  if (!element) return null;
+
+  if (mapState.instance) mapState.instance.remove();
+  mapState.savedMarkers.clear();
+
+  const map = L.map(element, { zoomControl: false, preferCanvas: true }).setView(DEFAULT_MAP_CENTER, 13);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(map);
+
+  const saved = places.filter((place) => isSaved(place.id));
+  const iconForSaved = savedMarkerIcon(L);
+  for (const place of saved) {
+    const marker = L.marker([place.lat, place.lng], { icon: iconForSaved })
+      .addTo(map)
+      .bindPopup(mapPopupHtml(place), { maxWidth: 230 });
+    mapState.savedMarkers.set(place.id, marker);
+  }
+
+  if (saved.length > 1) {
+    const bounds = L.latLngBounds(saved.map((place) => [place.lat, place.lng]));
+    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+  } else if (saved.length === 1) {
+    map.setView([saved[0].lat, saved[0].lng], 14);
+  }
+
+  mapState.instance = map;
+  if (mapState.userPosition) {
+    mapState.userMarker = L.marker(mapState.userPosition, { icon: userMarkerIcon(L) }).addTo(map);
+  } else {
+    mapState.userMarker = null;
+  }
+  updateMapCaption(saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
+  window.setTimeout(() => map.invalidateSize(), 50);
+  return map;
+}
+
+function locateDevice({ silent = false } = {}) {
+  if (!mapState.instance) return;
+  if (!navigator.geolocation) {
+    updateMapCaption("Trình duyệt này chưa hỗ trợ định vị");
+    if (!silent) showToast("Thiết bị chưa hỗ trợ định vị", "error");
+    return;
+  }
+
+  updateMapCaption("Đang tìm vị trí của bạn…");
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      const position = [coords.latitude, coords.longitude];
+      mapState.userPosition = position;
+      if (mapState.userMarker) mapState.userMarker.setLatLng(position);
+      else mapState.userMarker = window.L.marker(position, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
+      mapState.instance.setView(position, 14, { animate: true });
+      mapState.hasLocatedUser = true;
+      updateMapCaption("Vị trí của bạn · quán đã lưu được ghim trên bản đồ");
+      if (!silent) showToast("Đã định vị thiết bị", "success");
+    },
+    (error) => {
+      const messages = {
+        1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
+        2: "Chưa xác định được vị trí thiết bị",
+        3: "Định vị mất quá nhiều thời gian",
+      };
+      const message = messages[error.code] || "Không thể định vị thiết bị";
+      updateMapCaption(`${message} · đang hiển thị khu vực mặc định`);
+      if (!silent) showToast(message, "error");
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+  );
+}
+
+async function initInteractiveMap() {
+  const element = document.querySelector("#leaflet-map");
+  if (!element) return;
+  try {
+    const L = await loadLeaflet();
+    if (!L) throw new Error("Leaflet unavailable");
+    buildInteractiveMap(L);
+    if (!mapState.hasLocatedUser) locateDevice({ silent: true });
+  } catch {
+    showMapFallback("Không tải được bản đồ online · đang dùng bản đồ dự phòng");
+  }
 }
 
 function renderModal() {
@@ -365,6 +545,7 @@ function handleAction(event) {
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
+    case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
     case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; state.selectedShareFriends = new Set(); renderModal(); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "open-note": state.modal = { type: "note", placeId: target.dataset.placeId }; renderModal(); break;
