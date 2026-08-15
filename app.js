@@ -139,11 +139,17 @@ const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
 const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const MAP_LABEL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
 const MAP_TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
-const FAST_LOCATION_OPTIONS = {
+const CACHED_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
-  timeout: 2500,
-  maximumAge: 900000,
+  timeout: 200,
+  maximumAge: Infinity,
 };
+const FRESH_LOCATION_OPTIONS = {
+  enableHighAccuracy: false,
+  timeout: 2200,
+  maximumAge: 120000,
+};
+const FRESH_LOCATION_MAX_AGE = 10 * 60 * 1000;
 const mapState = {
   instance: null,
   userMarker: null,
@@ -474,37 +480,68 @@ function locateDevice({ silent = false } = {}) {
   }
 
   mapState.locationPending = true;
-  updateMapCaption("Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
-  navigator.geolocation.getCurrentPosition(
-    ({ coords }) => {
-      const position = [coords.latitude, coords.longitude];
-      mapState.userPosition = position;
-      mapState.locationPending = false;
+  const showPosition = (position, { cached = false } = {}) => {
+    const { coords } = position;
+    const point = [coords.latitude, coords.longitude];
+    const capturedAt = Number.isFinite(position.timestamp) ? position.timestamp : Date.now();
+    const age = Math.max(0, Date.now() - capturedAt);
+    mapState.userPosition = point;
+    if (!cached) {
       saveStorage(locationStorageKey, {
-        lat: Math.round(position[0] * 10000) / 10000,
-        lng: Math.round(position[1] * 10000) / 10000,
-        timestamp: Date.now(),
+        lat: Math.round(point[0] * 10000) / 10000,
+        lng: Math.round(point[1] * 10000) / 10000,
+        timestamp: capturedAt,
       });
-      if (mapState.userMarker) mapState.userMarker.setLatLng(position);
-      else mapState.userMarker = window.L.marker(position, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
-      mapState.instance.setView(position, 14, { animate: true });
-      mapState.hasLocatedUser = true;
-      updateMapCaption("Vị trí của bạn · quán đã lưu được ghim trên bản đồ");
-      if (!silent) showToast("Đã định vị thiết bị", "success");
-    },
-    (error) => {
+    }
+    if (mapState.userMarker) mapState.userMarker.setLatLng(point);
+    else mapState.userMarker = window.L.marker(point, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
+    mapState.instance.setView(point, 14, { animate: !cached });
+    mapState.hasLocatedUser = !cached || age <= FRESH_LOCATION_MAX_AGE;
+    return age;
+  };
+
+  const finishError = (error) => {
+    mapState.locationPending = false;
+    const messages = {
+      1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
+      2: "Chưa xác định được vị trí thiết bị",
+      3: "Định vị mất quá nhiều thời gian",
+    };
+    const message = messages[error.code] || "Không thể định vị thiết bị";
+    updateMapCaption(`${message} · ${mapState.userPosition ? "đang giữ vị trí gần đây" : "đang hiển thị khu vực mặc định"}`);
+    if (!silent) showToast(message, "error");
+  };
+
+  const finishFresh = (position) => {
+    showPosition(position);
+    mapState.locationPending = false;
+    updateMapCaption("Vị trí của bạn · quán đã lưu được ghim trên bản đồ");
+    if (!silent) showToast("Đã định vị thiết bị", "success");
+  };
+
+  const requestFresh = () => {
+    updateMapCaption(mapState.userPosition ? "Vị trí gần đây · đang cập nhật vị trí mới…" : "Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
+    navigator.geolocation.getCurrentPosition(finishFresh, finishError, FRESH_LOCATION_OPTIONS);
+  };
+
+  const acceptCached = (position) => {
+    const age = showPosition(position, { cached: true });
+    if (age <= FRESH_LOCATION_MAX_AGE) {
       mapState.locationPending = false;
-      const messages = {
-        1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
-        2: "Chưa xác định được vị trí thiết bị",
-        3: "Định vị mất quá nhiều thời gian",
-      };
-      const message = messages[error.code] || "Không thể định vị thiết bị";
-      updateMapCaption(`${message} · ${mapState.userPosition ? "đang giữ vị trí gần đây" : "đang hiển thị khu vực mặc định"}`);
-      if (!silent) showToast(message, "error");
-    },
-    FAST_LOCATION_OPTIONS,
-  );
+      updateMapCaption("Vị trí gần đây · bản đồ đã sẵn sàng");
+      if (!silent) showToast("Đã dùng vị trí gần đây", "success");
+      return;
+    }
+    requestFresh();
+  };
+
+  const handleCachedError = (error) => {
+    if (error.code === 1) finishError(error);
+    else requestFresh();
+  };
+
+  updateMapCaption(mapState.userPosition ? "Vị trí gần đây · kiểm tra cập nhật mới…" : "Đang kiểm tra vị trí đã cache…");
+  navigator.geolocation.getCurrentPosition(acceptCached, handleCachedError, CACHED_LOCATION_OPTIONS);
 }
 
 async function initInteractiveMap() {
