@@ -135,8 +135,9 @@ const state = {
 };
 
 const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
-const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const MAP_TILE_ATTRIBUTION = "&copy; OpenStreetMap contributors &copy; CARTO";
+const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const MAP_LABEL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const MAP_TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
   timeout: 2500,
@@ -404,8 +405,11 @@ function buildInteractiveMap(L) {
   L.control.zoom({ position: "bottomright" }).addTo(map);
   const tiles = L.tileLayer(MAP_TILE_URL, {
     maxZoom: 19,
-    subdomains: "abcd",
     attribution: MAP_TILE_ATTRIBUTION,
+  }).addTo(map);
+  L.tileLayer(MAP_LABEL_TILE_URL, {
+    maxZoom: 19,
+    opacity: 0.92,
   }).addTo(map);
   tiles.once("load", () => {
     mapState.tilesLoaded = true;
