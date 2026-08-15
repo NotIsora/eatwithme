@@ -135,6 +135,13 @@ const state = {
 };
 
 const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
+const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const MAP_TILE_ATTRIBUTION = "&copy; OpenStreetMap contributors &copy; CARTO";
+const FAST_LOCATION_OPTIONS = {
+  enableHighAccuracy: false,
+  timeout: 2500,
+  maximumAge: 900000,
+};
 const mapState = {
   instance: null,
   userMarker: null,
@@ -142,6 +149,8 @@ const mapState = {
   savedMarkers: new Map(),
   leafletPromise: null,
   hasLocatedUser: false,
+  tilesLoaded: false,
+  tileCheckTimer: null,
 };
 
 function readStorage(key, fallback) {
@@ -260,10 +269,6 @@ function renderHero() {
 
 function renderStats() {
   return `<section class="stat-row"><div class="stat-card"><div><div class="stat-value">${state.saved.length}</div><div class="stat-label">quán đã lưu</div></div><div class="stat-trend">+2 tháng này</div></div><div class="stat-card"><div><div class="stat-value">4</div><div class="stat-label">người bạn</div></div><div class="stat-trend">+1 mới</div></div><div class="stat-card"><div><div class="stat-value">7</div><div class="stat-label">lời rủ rê</div></div><div class="stat-trend">đang chờ bạn</div></div></section>`;
-}
-
-function renderMockMapLegacy() {
-  return `<section class="panel map-panel"><div class="map-toolbar"><button class="map-chip active">Gần bạn</button><button class="map-chip">Đang mở</button></div><div class="map-surface">${places.slice(0, 4).map((place) => `<button class="map-pin ${place.pin} ${state.modal?.placeId === place.id ? "selected" : ""}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div><div class="map-legend"><span class="legend-dot"></span>Quán đang mở <span class="legend-dot herb"></span>Bạn bè đã lưu</div></section>`;
 }
 
 function renderMapFallback() {
@@ -391,14 +396,21 @@ function buildInteractiveMap(L) {
   if (!element) return null;
 
   if (mapState.instance) mapState.instance.remove();
+  if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
   mapState.savedMarkers.clear();
+  mapState.tilesLoaded = false;
 
   const map = L.map(element, { zoomControl: false, preferCanvas: true }).setView(DEFAULT_MAP_CENTER, 13);
   L.control.zoom({ position: "bottomright" }).addTo(map);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const tiles = L.tileLayer(MAP_TILE_URL, {
     maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors",
+    subdomains: "abcd",
+    attribution: MAP_TILE_ATTRIBUTION,
   }).addTo(map);
+  tiles.once("load", () => {
+    mapState.tilesLoaded = true;
+    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
+  });
 
   const saved = places.filter((place) => isSaved(place.id));
   const iconForSaved = savedMarkerIcon(L);
@@ -423,6 +435,11 @@ function buildInteractiveMap(L) {
     mapState.userMarker = null;
   }
   updateMapCaption(saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
+  mapState.tileCheckTimer = window.setTimeout(() => {
+    if (mapState.instance === map && !mapState.tilesLoaded) {
+      showMapFallback("Không tải được nền bản đồ · đang dùng bản đồ dự phòng");
+    }
+  }, 5000);
   window.setTimeout(() => map.invalidateSize(), 50);
   return map;
 }
@@ -435,7 +452,7 @@ function locateDevice({ silent = false } = {}) {
     return;
   }
 
-  updateMapCaption("Đang tìm vị trí của bạn…");
+  updateMapCaption("Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
       const position = [coords.latitude, coords.longitude];
@@ -457,7 +474,7 @@ function locateDevice({ silent = false } = {}) {
       updateMapCaption(`${message} · đang hiển thị khu vực mặc định`);
       if (!silent) showToast(message, "error");
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
+    FAST_LOCATION_OPTIONS,
   );
 }
 
@@ -470,6 +487,7 @@ async function initInteractiveMap() {
     buildInteractiveMap(L);
     if (!mapState.hasLocatedUser) locateDevice({ silent: true });
   } catch {
+    mapState.leafletPromise = null;
     showMapFallback("Không tải được bản đồ online · đang dùng bản đồ dự phòng");
   }
 }
