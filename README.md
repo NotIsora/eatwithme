@@ -24,7 +24,8 @@ Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để �
 
 ## Những gì đã có trong MVP
 
-- Khám phá với search input, kết quả gần bạn và bản đồ trực quan dạng mock.
+- Khám phá với search input, kết quả gần bạn và bản đồ tương tác tối giản.
+- Bản đồ Leaflet/Esri World Light Gray, chỉ nhấn mạnh đường và tên đường; marker cho các quán đã lưu và định vị thiết bị bằng Geolocation API.
 - Place detail với địa chỉ, rating, trạng thái mở cửa và giờ đóng cửa.
 - Lưu/bỏ lưu quán, persistence bằng `localStorage`.
 - Bộ sưu tập, filter “đang mở”, tạo collection mới.
@@ -32,6 +33,13 @@ Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để �
 - Bạn bè, activity feed, lời mời và hộp thư.
 - Chia sẻ một quán cho nhiều bạn bè.
 - Responsive mobile layout, keyboard focus và reduced-motion support.
+
+### Lưu ý về vị trí và bản đồ
+
+- Bản đồ hiển thị ngay theo các quán đã lưu; định vị dùng vị trí gần đây lưu cục bộ (tối đa 30 phút) rồi cập nhật bằng lần lấy vị trí nhanh (cache/network tối đa khoảng 2,5 giây), nút “Định vị tôi” cho phép thử lại.
+- Geolocation cần `localhost` hoặc HTTPS. Khi mở trên điện thoại bằng IP nội bộ dạng `http://192.168...`, bản đồ vẫn có thể xem nhưng trình duyệt có thể chặn vị trí.
+- Nền bản đồ dùng Esri World Light Gray Base/Reference và có attribution; production nên kiểm tra chính sách tile/traffic phù hợp.
+- Có thể làm bản đồ offline bằng PMTiles/MBTiles (đóng gói một vùng địa lý và phục vụ tile local), nhưng file sẽ lớn và phải tự cập nhật dữ liệu/giấy phép. MVP hiện dùng tile online để giữ bundle nhỏ.
 
 ## Nối backend thật
 

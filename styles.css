@@ -137,6 +137,26 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 .map-toolbar { position: absolute; left: 18px; top: 17px; z-index: 2; display: flex; gap: 8px; }
 .map-chip { border: 1px solid rgba(255,255,255,.76); background: rgba(255,255,255,.8); color: var(--ink); padding: 8px 11px; border-radius: 99px; font-weight: 700; font-size: 12px; box-shadow: 0 3px 10px rgba(29,52,37,.09); }
 .map-chip.active { color: white; background: var(--herb); border-color: var(--herb); }
+.map-locate-chip { display: inline-flex; align-items: center; gap: 5px; }
+.leaflet-map, .map-fallback { position: absolute; inset: 0; z-index: 1; }
+.leaflet-container { color: var(--ink); background: #edf1ed; font: 12px/1.45 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
+.leaflet-tile-pane { filter: grayscale(1) saturate(.08) contrast(.82) brightness(1.12); }
+.leaflet-control-zoom { border: 0 !important; box-shadow: 0 4px 14px rgba(48,34,23,.13) !important; }
+.leaflet-control-zoom a { color: var(--ink) !important; border: 0 !important; background: rgba(255,253,249,.92) !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--paper); box-shadow: 0 9px 26px rgba(48,34,23,.14); }
+.leaflet-popup-content { margin: 13px 14px; min-width: 178px; }
+.map-popup { display: grid; gap: 5px; }
+.map-popup strong { font: 700 15px/1.1 Fraunces, Georgia, serif; }
+.map-popup > span { color: var(--ink-muted); font-size: 11px; }
+.map-popup .status { font-size: 10px; }
+.map-popup-button { width: 100%; border: 0; border-radius: 9px; padding: 8px 9px; color: white; background: var(--coral); font-size: 11px; font-weight: 700; text-align: left; }
+.map-popup-button:hover { background: var(--coral-dark); }
+.eatwithme-marker-wrap { border: 0 !important; background: transparent !important; }
+.eatwithme-marker { display: grid; place-items: center; width: 30px; height: 30px; border: 3px solid var(--paper); border-radius: 50% 50% 50% 4px; color: white; background: var(--coral); box-shadow: 0 6px 15px rgba(65,38,26,.28); transform: rotate(-45deg); font-size: 12px; }
+.eatwithme-marker.saved-marker { background: var(--coral); }
+.eatwithme-marker.user-marker { width: 21px; height: 21px; border-radius: 50%; background: var(--herb); box-shadow: 0 0 0 8px rgba(44,106,82,.16), 0 5px 13px rgba(38,69,51,.24); transform: none; }
+.eatwithme-marker.user-marker span { width: 7px; height: 7px; border-radius: 50%; background: white; }
+.map-location-caption { position: absolute; right: 18px; bottom: 17px; z-index: 3; max-width: 230px; padding: 9px 12px; border-radius: 12px; color: var(--ink-muted); background: rgba(255,253,249,.88); box-shadow: 0 3px 10px rgba(29,52,37,.09); font-size: 11px; }
 .map-surface { position: absolute; inset: 0; background: linear-gradient(140deg, #d6e8d6 0%, #ecf0dc 42%, #d8e8df 100%); overflow: hidden; }
 .map-surface::before, .map-surface::after { content: ''; position: absolute; background: rgba(255,255,255,.6); transform: rotate(-17deg); border-radius: 99px; }
 .map-surface::before { width: 150%; height: 42px; left: -10%; top: 58%; box-shadow: 0 -145px 0 rgba(255,255,255,.38), 0 125px 0 rgba(255,255,255,.28); }
@@ -148,7 +168,8 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 .map-pin:hover, .map-pin.selected { scale: 1.16; transform: rotate(-45deg) translateY(-3px); z-index: 3; }
 .map-pin.selected { background: var(--herb); }
 .map-pin.p1 { left: 24%; top: 43%; } .map-pin.p2 { left: 59%; top: 33%; } .map-pin.p3 { left: 73%; top: 57%; } .map-pin.p4 { left: 41%; top: 71%; }
-.map-legend { position: absolute; left: 18px; bottom: 17px; padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.82); color: var(--ink-muted); font-size: 11px; z-index: 2; }
+.map-pin.p5 { left: 81%; top: 26%; }
+.map-legend { position: absolute; left: 18px; bottom: 17px; padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.82); color: var(--ink-muted); font-size: 11px; z-index: 3; }
 .legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); margin-right: 6px; }
 .legend-dot.herb { background: var(--herb); margin-left: 10px; }
 

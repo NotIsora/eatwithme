@@ -18,6 +18,8 @@ const ICONS = {
 const places = [
   {
     id: "bun-cha-huong-lien",
+    lat: 21.0209,
+    lng: 105.8490,
     name: "Bún chả Hương Liên",
     category: "Món Việt · bún chả",
     address: "24 Lê Văn Hưu, Hai Bà Trưng",
@@ -32,6 +34,8 @@ const places = [
   },
   {
     id: "pizza-4ps-trang-tien",
+    lat: 21.0258,
+    lng: 105.8540,
     name: "Pizza 4P’s Tràng Tiền",
     category: "Pizza · Ý hiện đại",
     address: "43 Tràng Tiền, Hoàn Kiếm",
@@ -46,6 +50,8 @@ const places = [
   },
   {
     id: "lac-cafe",
+    lat: 21.0252,
+    lng: 105.8546,
     name: "Lạc Cà Phê",
     category: "Cà phê · yên tĩnh",
     address: "12 Ngõ Tràng Tiền, Hoàn Kiếm",
@@ -60,6 +66,8 @@ const places = [
   },
   {
     id: "quan-an-ngon",
+    lat: 21.0243,
+    lng: 105.8419,
     name: "Quán Ăn Ngon",
     category: "Món Việt · gia đình",
     address: "18 Phan Bội Châu, Hoàn Kiếm",
@@ -74,6 +82,8 @@ const places = [
   },
   {
     id: "bep-me-in",
+    lat: 21.0290,
+    lng: 105.8540,
     name: "Bếp Mẹ Ỉn",
     category: "Món Việt · cơm nhà",
     address: "136 Hàng Trống, Hoàn Kiếm",
@@ -82,6 +92,7 @@ const places = [
     closes: "22:00",
     rating: "4.7",
     color: "taco",
+    pin: "p5",
     description: "Mâm cơm nhà miền Nam, nhiều rau thơm và phần ăn vừa đủ để gọi thêm món.",
     hours: "10:30 – 22:00",
   },
@@ -103,6 +114,7 @@ const activities = [
 const initialSaved = [places[0].id, places[2].id];
 const storageKey = "eatwithme.saved.v1";
 const notesKey = "eatwithme.notes.v1";
+const locationStorageKey = "eatwithme.location.v1";
 
 const state = {
   view: "explore",
@@ -123,6 +135,27 @@ const state = {
   ],
 };
 
+const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
+const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const MAP_LABEL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const MAP_TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
+const FAST_LOCATION_OPTIONS = {
+  enableHighAccuracy: false,
+  timeout: 2500,
+  maximumAge: 900000,
+};
+const mapState = {
+  instance: null,
+  userMarker: null,
+  userPosition: null,
+  savedMarkers: new Map(),
+  leafletPromise: null,
+  hasLocatedUser: false,
+  locationPending: false,
+  tilesLoaded: false,
+  tileCheckTimer: null,
+};
+
 function readStorage(key, fallback) {
   try {
     const value = JSON.parse(localStorage.getItem(key));
@@ -131,6 +164,16 @@ function readStorage(key, fallback) {
     return fallback;
   }
 }
+
+function readCachedLocation() {
+  const cached = readStorage(locationStorageKey, null);
+  if (!cached || !Number.isFinite(cached.lat) || !Number.isFinite(cached.lng) || !Number.isFinite(cached.timestamp)) return null;
+  if (Date.now() - cached.timestamp > 30 * 60 * 1000) return null;
+  if (cached.lat < -90 || cached.lat > 90 || cached.lng < -180 || cached.lng > 180) return null;
+  return [cached.lat, cached.lng];
+}
+
+mapState.userPosition = readCachedLocation();
 
 function saveStorage(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* demo mode */ }
@@ -241,8 +284,16 @@ function renderStats() {
   return `<section class="stat-row"><div class="stat-card"><div><div class="stat-value">${state.saved.length}</div><div class="stat-label">quán đã lưu</div></div><div class="stat-trend">+2 tháng này</div></div><div class="stat-card"><div><div class="stat-value">4</div><div class="stat-label">người bạn</div></div><div class="stat-trend">+1 mới</div></div><div class="stat-card"><div><div class="stat-value">7</div><div class="stat-label">lời rủ rê</div></div><div class="stat-trend">đang chờ bạn</div></div></section>`;
 }
 
+function renderMapFallback() {
+  const savedPlaces = places.filter((place) => isSaved(place.id));
+  return `<div id="map-fallback" class="map-fallback hidden"><div class="map-surface">${savedPlaces.map((place) => `<button class="map-pin ${place.pin}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div></div>`;
+}
+
+// This definition intentionally sits after the original mock-map function.
+// Function declarations are hoisted; the latest one is used by renderExplore.
 function renderMap() {
-  return `<section class="panel map-panel"><div class="map-toolbar"><button class="map-chip active">Gần bạn</button><button class="map-chip">Đang mở</button></div><div class="map-surface">${places.slice(0, 4).map((place) => `<button class="map-pin ${place.pin} ${state.modal?.placeId === place.id ? "selected" : ""}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div><div class="map-legend"><span class="legend-dot"></span>Quán đang mở <span class="legend-dot herb"></span>Bạn bè đã lưu</div></section>`;
+  const savedCount = places.filter((place) => isSaved(place.id)).length;
+  return `<section class="panel map-panel" data-map-shell><div class="map-toolbar"><button class="map-chip active">Đã lưu · ${savedCount}</button><button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button></div><div id="leaflet-map" class="leaflet-map" aria-label="Bản đồ các quán đã lưu"></div>${renderMapFallback()}<div id="map-location-caption" class="map-location-caption">Đang chuẩn bị bản đồ tương tác…</div><div class="map-legend"><span class="legend-dot"></span>Quán đã lưu <span class="legend-dot herb"></span>Vị trí của bạn</div></section>`;
 }
 
 function renderActivity() {
@@ -292,6 +343,182 @@ function renderApp() {
   document.querySelector("#app").innerHTML = `<div class="app-shell">${renderSidebar()}<main class="main">${renderTopbar()}<div id="page-content">${renderMain()}</div></main>${renderMobileTabbar()}</div>`;
   bindAppEvents();
   renderModal();
+  if (state.view === "explore") window.setTimeout(initInteractiveMap, 0);
+}
+
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (mapState.leafletPromise) return mapState.leafletPromise;
+
+  mapState.leafletPromise = new Promise((resolve, reject) => {
+    if (!document.querySelector("link[data-leaflet-css]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.dataset.leafletCss = "true";
+      document.head.appendChild(link);
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async = true;
+    script.onload = () => resolve(window.L);
+    script.onerror = () => reject(new Error("Leaflet could not be loaded"));
+    document.head.appendChild(script);
+  });
+
+  return mapState.leafletPromise;
+}
+
+function mapPopupHtml(place) {
+  return `<div class="map-popup"><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(place.address)}</span>${statusLabel(place)}<button class="map-popup-button" data-action="open-place" data-place-id="${place.id}">Mở chi tiết ${icon("arrow")}</button></div>`;
+}
+
+function updateMapCaption(message) {
+  const caption = document.querySelector("#map-location-caption");
+  if (caption) caption.textContent = message;
+}
+
+function showMapFallback(message) {
+  document.querySelector("#leaflet-map")?.classList.add("hidden");
+  document.querySelector("#map-fallback")?.classList.remove("hidden");
+  updateMapCaption(message);
+}
+
+function savedMarkerIcon(L) {
+  return L.divIcon({
+    className: "eatwithme-marker-wrap",
+    html: '<span class="eatwithme-marker saved-marker">●</span>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -26],
+  });
+}
+
+function userMarkerIcon(L) {
+  return L.divIcon({
+    className: "eatwithme-marker-wrap",
+    html: '<span class="eatwithme-marker user-marker"><span></span></span>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
+function buildInteractiveMap(L) {
+  const element = document.querySelector("#leaflet-map");
+  if (!element) return null;
+
+  if (mapState.instance) mapState.instance.remove();
+  if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
+  mapState.savedMarkers.clear();
+  mapState.tilesLoaded = false;
+
+  const map = L.map(element, { zoomControl: false, preferCanvas: true }).setView(DEFAULT_MAP_CENTER, 13);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+  const tiles = L.tileLayer(MAP_TILE_URL, {
+    maxZoom: 19,
+    attribution: MAP_TILE_ATTRIBUTION,
+  }).addTo(map);
+  L.tileLayer(MAP_LABEL_TILE_URL, {
+    maxZoom: 19,
+    opacity: 0.92,
+  }).addTo(map);
+  tiles.once("load", () => {
+    mapState.tilesLoaded = true;
+    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
+  });
+
+  const saved = places.filter((place) => isSaved(place.id));
+  const iconForSaved = savedMarkerIcon(L);
+  for (const place of saved) {
+    const marker = L.marker([place.lat, place.lng], { icon: iconForSaved })
+      .addTo(map)
+      .bindPopup(mapPopupHtml(place), { maxWidth: 230 });
+    mapState.savedMarkers.set(place.id, marker);
+  }
+
+  const points = saved.map((place) => [place.lat, place.lng]);
+  if (mapState.userPosition) points.push(mapState.userPosition);
+  if (points.length > 1) {
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+  } else if (points.length === 1) {
+    map.setView(points[0], 14);
+  }
+
+  mapState.instance = map;
+  if (mapState.userPosition) {
+    mapState.userMarker = L.marker(mapState.userPosition, { icon: userMarkerIcon(L) }).addTo(map);
+  } else {
+    mapState.userMarker = null;
+  }
+  updateMapCaption(mapState.userPosition
+    ? "Vị trí gần đây · đang cập nhật vị trí mới"
+    : saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
+  mapState.tileCheckTimer = window.setTimeout(() => {
+    if (mapState.instance === map && !mapState.tilesLoaded) {
+      showMapFallback("Không tải được nền bản đồ · đang dùng bản đồ dự phòng");
+    }
+  }, 5000);
+  window.setTimeout(() => map.invalidateSize(), 50);
+  return map;
+}
+
+function locateDevice({ silent = false } = {}) {
+  if (!mapState.instance) return;
+  if (mapState.locationPending) return;
+  if (!navigator.geolocation) {
+    updateMapCaption("Trình duyệt này chưa hỗ trợ định vị");
+    if (!silent) showToast("Thiết bị chưa hỗ trợ định vị", "error");
+    return;
+  }
+
+  mapState.locationPending = true;
+  updateMapCaption("Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      const position = [coords.latitude, coords.longitude];
+      mapState.userPosition = position;
+      mapState.locationPending = false;
+      saveStorage(locationStorageKey, {
+        lat: Math.round(position[0] * 10000) / 10000,
+        lng: Math.round(position[1] * 10000) / 10000,
+        timestamp: Date.now(),
+      });
+      if (mapState.userMarker) mapState.userMarker.setLatLng(position);
+      else mapState.userMarker = window.L.marker(position, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
+      mapState.instance.setView(position, 14, { animate: true });
+      mapState.hasLocatedUser = true;
+      updateMapCaption("Vị trí của bạn · quán đã lưu được ghim trên bản đồ");
+      if (!silent) showToast("Đã định vị thiết bị", "success");
+    },
+    (error) => {
+      mapState.locationPending = false;
+      const messages = {
+        1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
+        2: "Chưa xác định được vị trí thiết bị",
+        3: "Định vị mất quá nhiều thời gian",
+      };
+      const message = messages[error.code] || "Không thể định vị thiết bị";
+      updateMapCaption(`${message} · ${mapState.userPosition ? "đang giữ vị trí gần đây" : "đang hiển thị khu vực mặc định"}`);
+      if (!silent) showToast(message, "error");
+    },
+    FAST_LOCATION_OPTIONS,
+  );
+}
+
+async function initInteractiveMap() {
+  const element = document.querySelector("#leaflet-map");
+  if (!element) return;
+  try {
+    const L = await loadLeaflet();
+    if (!L) throw new Error("Leaflet unavailable");
+    buildInteractiveMap(L);
+    if (!mapState.hasLocatedUser) locateDevice({ silent: true });
+  } catch {
+    mapState.leafletPromise = null;
+    showMapFallback("Không tải được bản đồ online · đang dùng bản đồ dự phòng");
+  }
 }
 
 function renderModal() {
@@ -365,6 +592,7 @@ function handleAction(event) {
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
+    case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
     case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; state.selectedShareFriends = new Set(); renderModal(); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "open-note": state.modal = { type: "note", placeId: target.dataset.placeId }; renderModal(); break;
