@@ -36,7 +36,7 @@ Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để �
 
 ### Lưu ý về vị trí và bản đồ
 
-- Bản đồ hiển thị ngay theo các quán đã lưu; định vị dùng lần lấy vị trí nhanh (cache/network tối đa khoảng 2,5 giây), nút “Định vị tôi” cho phép thử lại.
+- Bản đồ hiển thị ngay theo các quán đã lưu; định vị dùng vị trí gần đây lưu cục bộ (tối đa 30 phút) rồi cập nhật bằng lần lấy vị trí nhanh (cache/network tối đa khoảng 2,5 giây), nút “Định vị tôi” cho phép thử lại.
 - Geolocation cần `localhost` hoặc HTTPS. Khi mở trên điện thoại bằng IP nội bộ dạng `http://192.168...`, bản đồ vẫn có thể xem nhưng trình duyệt có thể chặn vị trí.
 - Nền bản đồ dùng Esri World Light Gray Base/Reference và có attribution; production nên kiểm tra chính sách tile/traffic phù hợp.
 - Có thể làm bản đồ offline bằng PMTiles/MBTiles (đóng gói một vùng địa lý và phục vụ tile local), nhưng file sẽ lớn và phải tự cập nhật dữ liệu/giấy phép. MVP hiện dùng tile online để giữ bundle nhỏ.

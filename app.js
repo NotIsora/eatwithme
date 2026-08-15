@@ -114,6 +114,7 @@ const activities = [
 const initialSaved = [places[0].id, places[2].id];
 const storageKey = "eatwithme.saved.v1";
 const notesKey = "eatwithme.notes.v1";
+const locationStorageKey = "eatwithme.location.v1";
 
 const state = {
   view: "explore",
@@ -150,6 +151,7 @@ const mapState = {
   savedMarkers: new Map(),
   leafletPromise: null,
   hasLocatedUser: false,
+  locationPending: false,
   tilesLoaded: false,
   tileCheckTimer: null,
 };
@@ -162,6 +164,16 @@ function readStorage(key, fallback) {
     return fallback;
   }
 }
+
+function readCachedLocation() {
+  const cached = readStorage(locationStorageKey, null);
+  if (!cached || !Number.isFinite(cached.lat) || !Number.isFinite(cached.lng) || !Number.isFinite(cached.timestamp)) return null;
+  if (Date.now() - cached.timestamp > 30 * 60 * 1000) return null;
+  if (cached.lat < -90 || cached.lat > 90 || cached.lng < -180 || cached.lng > 180) return null;
+  return [cached.lat, cached.lng];
+}
+
+mapState.userPosition = readCachedLocation();
 
 function saveStorage(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* demo mode */ }
@@ -425,11 +437,13 @@ function buildInteractiveMap(L) {
     mapState.savedMarkers.set(place.id, marker);
   }
 
-  if (saved.length > 1) {
-    const bounds = L.latLngBounds(saved.map((place) => [place.lat, place.lng]));
+  const points = saved.map((place) => [place.lat, place.lng]);
+  if (mapState.userPosition) points.push(mapState.userPosition);
+  if (points.length > 1) {
+    const bounds = L.latLngBounds(points);
     map.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
-  } else if (saved.length === 1) {
-    map.setView([saved[0].lat, saved[0].lng], 14);
+  } else if (points.length === 1) {
+    map.setView(points[0], 14);
   }
 
   mapState.instance = map;
@@ -438,7 +452,9 @@ function buildInteractiveMap(L) {
   } else {
     mapState.userMarker = null;
   }
-  updateMapCaption(saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
+  updateMapCaption(mapState.userPosition
+    ? "Vị trí gần đây · đang cập nhật vị trí mới"
+    : saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
   mapState.tileCheckTimer = window.setTimeout(() => {
     if (mapState.instance === map && !mapState.tilesLoaded) {
       showMapFallback("Không tải được nền bản đồ · đang dùng bản đồ dự phòng");
@@ -450,17 +466,25 @@ function buildInteractiveMap(L) {
 
 function locateDevice({ silent = false } = {}) {
   if (!mapState.instance) return;
+  if (mapState.locationPending) return;
   if (!navigator.geolocation) {
     updateMapCaption("Trình duyệt này chưa hỗ trợ định vị");
     if (!silent) showToast("Thiết bị chưa hỗ trợ định vị", "error");
     return;
   }
 
+  mapState.locationPending = true;
   updateMapCaption("Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
       const position = [coords.latitude, coords.longitude];
       mapState.userPosition = position;
+      mapState.locationPending = false;
+      saveStorage(locationStorageKey, {
+        lat: Math.round(position[0] * 10000) / 10000,
+        lng: Math.round(position[1] * 10000) / 10000,
+        timestamp: Date.now(),
+      });
       if (mapState.userMarker) mapState.userMarker.setLatLng(position);
       else mapState.userMarker = window.L.marker(position, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
       mapState.instance.setView(position, 14, { animate: true });
@@ -469,13 +493,14 @@ function locateDevice({ silent = false } = {}) {
       if (!silent) showToast("Đã định vị thiết bị", "success");
     },
     (error) => {
+      mapState.locationPending = false;
       const messages = {
         1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
         2: "Chưa xác định được vị trí thiết bị",
         3: "Định vị mất quá nhiều thời gian",
       };
       const message = messages[error.code] || "Không thể định vị thiết bị";
-      updateMapCaption(`${message} · đang hiển thị khu vực mặc định`);
+      updateMapCaption(`${message} · ${mapState.userPosition ? "đang giữ vị trí gần đây" : "đang hiển thị khu vực mặc định"}`);
       if (!silent) showToast(message, "error");
     },
     FAST_LOCATION_OPTIONS,
