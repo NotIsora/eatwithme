@@ -114,7 +114,17 @@ const activities = [
 const initialSaved = [places[0].id, places[2].id];
 const storageKey = "eatwithme.saved.v1";
 const notesKey = "eatwithme.notes.v1";
+const collectionsKey = "eatwithme.collections.v1";
 const locationStorageKey = "eatwithme.location.v1";
+const backendUserKey = "eatwithme.backend-user.v1";
+
+const backend = {
+  baseUrl: null,
+  userId: null,
+  available: false,
+  syncTimer: null,
+  warned: false,
+};
 
 const state = {
   view: "explore",
@@ -128,28 +138,149 @@ const state = {
   toastTimer: null,
   selectedShareFriends: new Set(),
   installAvailable: false,
-  collections: [
+  collections: readStorage(collectionsKey, [
     { id: "all", name: "Tất cả địa điểm", count: 2 },
     { id: "want", name: "Muốn thử", count: 1 },
     { id: "visited", name: "Đã ăn rồi", count: 1 },
-  ],
+    ]),
 };
 
+function resolveBackendBaseUrl() {
+  const configured = String(window.EATWITHME_API_BASE || readStorage("eatwithme.api-base.v1", "") || "").trim();
+  if (configured) return configured.replace(/\/+$/, "");
+  // Browser/PWA: same-origin API. Native shells must set EATWITHME_API_BASE
+  // to the reachable HTTPS/LAN API host because capacitor://localhost has no API route.
+  if (/^https?:$/.test(window.location.protocol)) return `${window.location.origin}/api`;
+  return null;
+}
+
+function getBackendUserId() {
+  try {
+    const existing = localStorage.getItem(backendUserKey);
+    if (existing && /^[A-Za-z0-9._-]{1,80}$/.test(existing)) return existing;
+    const generated = `device-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+    localStorage.setItem(backendUserKey, generated);
+    return generated;
+  } catch {
+    return "demo";
+  }
+}
+
+function backendPayload() {
+  return {
+    saved: state.saved,
+    notes: state.notes,
+    collections: state.collections,
+  };
+}
+
+async function backendRequest(path, options = {}) {
+  if (!backend.baseUrl) throw new Error("Backend URL is not configured");
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 3500);
+  try {
+    const response = await fetch(`${backend.baseUrl}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-EatWithMe-User": backend.userId,
+        ...(options.headers || {}),
+      },
+    });
+    if (!response.ok) throw new Error(`Backend returned ${response.status}`);
+    return response.json();
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+function saveLocalState() {
+  saveStorage(storageKey, state.saved);
+  saveStorage(notesKey, state.notes);
+  saveStorage(collectionsKey, state.collections);
+}
+
+async function syncBackendState() {
+  if (!backend.available) return;
+  try {
+    await backendRequest("/v1/state", { method: "PUT", body: JSON.stringify({ data: backendPayload() }) });
+  } catch {
+    backend.available = false;
+    if (!backend.warned) {
+      backend.warned = true;
+      showToast("Backend tạm thời không kết nối · vẫn lưu trên thiết bị", "error");
+    }
+  }
+}
+
+function scheduleBackendSync() {
+  if (!backend.available) return;
+  if (backend.syncTimer) window.clearTimeout(backend.syncTimer);
+  backend.syncTimer = window.setTimeout(() => {
+    backend.syncTimer = null;
+    syncBackendState();
+  }, 180);
+}
+
+async function bootstrapBackend() {
+  backend.baseUrl = resolveBackendBaseUrl();
+  backend.userId = getBackendUserId();
+  if (!backend.baseUrl) return;
+  try {
+    const response = await backendRequest("/v1/state");
+    const remote = response?.data;
+    if (response?.exists && remote) {
+      state.saved = Array.isArray(remote.saved) ? remote.saved : state.saved;
+      state.notes = remote.notes && typeof remote.notes === "object" ? remote.notes : state.notes;
+      state.collections = Array.isArray(remote.collections) && remote.collections.length ? remote.collections : state.collections;
+      saveLocalState();
+    } else {
+      backend.available = true;
+      await syncBackendState();
+      return;
+    }
+    backend.available = true;
+    renderApp();
+  } catch {
+    // Local-first fallback keeps the PWA usable offline and before API deployment.
+    backend.available = false;
+  }
+}
+
 const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
+const CITIES = {
+  hanoi: { name: "Hà Nội", center: [21.0285, 105.8542], zoom: 13 },
+  hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: 13 },
+  danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: 13 },
+};
+const GPS_HARD_DEADLINE_MS = 1500;
 const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const MAP_LABEL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
 const MAP_TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
-const CACHED_LOCATION_OPTIONS = {
+const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
-  timeout: 200,
-  maximumAge: Infinity,
+  timeout: 600,
+  maximumAge: 10 * 60 * 1000,
 };
-const FRESH_LOCATION_OPTIONS = {
+const NATIVE_FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
-  timeout: 2200,
-  maximumAge: 120000,
+  timeout: 500,
+  maximumAge: 10 * 60 * 1000,
 };
-const FRESH_LOCATION_MAX_AGE = 10 * 60 * 1000;
+const PRECISE_LOCATION_OPTIONS = {
+  enableHighAccuracy: true,
+  timeout: 3500,
+  maximumAge: 60 * 1000,
+};
+const NATIVE_PRECISE_LOCATION_OPTIONS = {
+  enableHighAccuracy: true,
+  timeout: 3500,
+  maximumAge: 60 * 1000,
+};
+const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
 const mapState = {
   instance: null,
   userMarker: null,
@@ -158,6 +289,8 @@ const mapState = {
   leafletPromise: null,
   hasLocatedUser: false,
   locationPending: false,
+  isRefining: false,
+  isPrecise: false,
   tilesLoaded: false,
   tileCheckTimer: null,
 };
@@ -174,9 +307,14 @@ function readStorage(key, fallback) {
 function readCachedLocation() {
   const cached = readStorage(locationStorageKey, null);
   if (!cached || !Number.isFinite(cached.lat) || !Number.isFinite(cached.lng) || !Number.isFinite(cached.timestamp)) return null;
-  if (Date.now() - cached.timestamp > 30 * 60 * 1000) return null;
+  if (Date.now() - cached.timestamp > MAX_CACHE_AGE_MS) return null;
   if (cached.lat < -90 || cached.lat > 90 || cached.lng < -180 || cached.lng > 180) return null;
   return [cached.lat, cached.lng];
+}
+
+function isCachedLocationFresh() {
+  const cached = readStorage(locationStorageKey, null);
+  return Boolean(cached && Number.isFinite(cached.timestamp) && (Date.now() - cached.timestamp <= STALE_THRESHOLD_MS));
 }
 
 mapState.userPosition = readCachedLocation();
@@ -299,7 +437,20 @@ function renderMapFallback() {
 // Function declarations are hoisted; the latest one is used by renderExplore.
 function renderMap() {
   const savedCount = places.filter((place) => isSaved(place.id)).length;
-  return `<section class="panel map-panel" data-map-shell><div class="map-toolbar"><button class="map-chip active">Đã lưu · ${savedCount}</button><button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button></div><div id="leaflet-map" class="leaflet-map" aria-label="Bản đồ các quán đã lưu"></div>${renderMapFallback()}<div id="map-location-caption" class="map-location-caption">Đang chuẩn bị bản đồ tương tác…</div><div class="map-legend"><span class="legend-dot"></span>Quán đã lưu <span class="legend-dot herb"></span>Vị trí của bạn</div></section>`;
+  return `
+    <section class="panel map-panel" data-map-shell>
+      <div class="map-toolbar">
+        <button class="map-chip active" data-action="fit-saved" aria-label="Xem các quán đã lưu">Đã lưu · ${savedCount}</button>
+        <button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button>
+        <button class="map-chip" data-action="switch-city" data-city="hanoi">Hà Nội</button>
+        <button class="map-chip" data-action="switch-city" data-city="hcm">TP. HCM</button>
+        <button class="map-chip" data-action="switch-city" data-city="danang">Đà Nẵng</button>
+      </div>
+      <div id="leaflet-map" class="leaflet-map" aria-label="Bản đồ các quán đã lưu"></div>
+      ${renderMapFallback()}
+      <div id="map-location-caption" class="map-location-caption">Đang chuẩn bị bản đồ tương tác…</div>
+      <div class="map-legend"><span class="legend-dot"></span>Quán đã lưu <span class="legend-dot herb"></span>Vị trí của bạn</div>
+    </section>`;
 }
 
 function renderActivity() {
@@ -357,12 +508,26 @@ function loadLeaflet() {
   if (mapState.leafletPromise) return mapState.leafletPromise;
 
   mapState.leafletPromise = new Promise((resolve, reject) => {
+    if (window.L) { resolve(window.L); return; }
+
     if (!document.querySelector("link[data-leaflet-css]")) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       link.dataset.leafletCss = "true";
       document.head.appendChild(link);
+    }
+
+    const existingScript = document.querySelector('script[src*="leaflet.js"]');
+    if (existingScript) {
+      if (window.L) { resolve(window.L); return; }
+      existingScript.addEventListener("load", () => resolve(window.L));
+      existingScript.addEventListener("error", () => reject(new Error("Leaflet could not be loaded")));
+      const poll = window.setInterval(() => {
+        if (window.L) { window.clearInterval(poll); resolve(window.L); }
+      }, 30);
+      window.setTimeout(() => { window.clearInterval(poll); if (window.L) resolve(window.L); else reject(new Error("Leaflet timeout")); }, 4000);
+      return;
     }
 
     const script = document.createElement("script");
@@ -401,10 +566,11 @@ function savedMarkerIcon(L) {
   });
 }
 
-function userMarkerIcon(L) {
+function userMarkerIcon(L, { refining = false, precise = false } = {}) {
+  const extraClass = precise ? "precise" : refining ? "refining" : "";
   return L.divIcon({
     className: "eatwithme-marker-wrap",
-    html: '<span class="eatwithme-marker user-marker"><span></span></span>',
+    html: `<span class="eatwithme-marker user-marker ${extraClass}"><span></span></span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
   });
@@ -454,12 +620,20 @@ function buildInteractiveMap(L) {
 
   mapState.instance = map;
   if (mapState.userPosition) {
-    mapState.userMarker = L.marker(mapState.userPosition, { icon: userMarkerIcon(L) }).addTo(map);
+    const fresh = isCachedLocationFresh();
+    mapState.isPrecise = fresh;
+    mapState.isRefining = !fresh;
+    mapState.userMarker = L.marker(mapState.userPosition, {
+      icon: userMarkerIcon(L, { refining: !fresh, precise: fresh }),
+    }).addTo(map);
   } else {
     mapState.userMarker = null;
+    mapState.isRefining = false;
+    mapState.isPrecise = false;
   }
+
   updateMapCaption(mapState.userPosition
-    ? "Vị trí gần đây · đang cập nhật vị trí mới"
+    ? (isCachedLocationFresh() ? "Vị trí của bạn · bản đồ đã sẵn sàng" : "Vị trí gần đây · đang làm mới vị trí…")
     : saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
   mapState.tileCheckTimer = window.setTimeout(() => {
     if (mapState.instance === map && !mapState.tilesLoaded) {
@@ -470,78 +644,315 @@ function buildInteractiveMap(L) {
   return map;
 }
 
-function locateDevice({ silent = false } = {}) {
-  if (!mapState.instance) return;
-  if (mapState.locationPending) return;
-  if (!navigator.geolocation) {
-    updateMapCaption("Trình duyệt này chưa hỗ trợ định vị");
-    if (!silent) showToast("Thiết bị chưa hỗ trợ định vị", "error");
-    return;
+let nativeGeolocationPromise = null;
+
+function isNativeCapacitor() {
+  return Boolean(window.Capacitor?.isNativePlatform?.());
+}
+
+async function loadNativeGeolocation() {
+  if (!isNativeCapacitor()) return null;
+  if (!nativeGeolocationPromise) {
+    nativeGeolocationPromise = import("@capacitor/geolocation")
+      .then(({ Geolocation }) => Geolocation)
+      .catch(() => null);
+  }
+  return nativeGeolocationPromise;
+}
+
+function normalizeNativeLocationError(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  if (message.includes("permission") || message.includes("denied")) return { code: 1 };
+  if (message.includes("timeout")) return { code: 3 };
+  return { code: 2 };
+}
+
+function withLocationTimeout(promise, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject({ code: 3 }), timeoutMs);
+    Promise.resolve(promise).then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (error) => { window.clearTimeout(timer); reject(error); },
+    );
+  });
+}
+
+async function checkFastPermissions() {
+  if (isNativeCapacitor()) {
+    const Geolocation = await loadNativeGeolocation();
+    if (!Geolocation) return "prompt";
+    try {
+      const perms = await Geolocation.checkPermissions();
+      return perms?.location || "prompt";
+    } catch {
+      return "prompt";
+    }
+  }
+  if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+    try {
+      const perm = await navigator.permissions.query({ name: "geolocation" });
+      return perm?.state || "prompt";
+    } catch {
+      return "prompt";
+    }
+  }
+  return "prompt";
+}
+
+async function requestFastPosition() {
+  if (isNativeCapacitor()) {
+    const Geolocation = await loadNativeGeolocation();
+    if (!Geolocation) return null;
+    try {
+      const pos = await withLocationTimeout(
+        Geolocation.getCurrentPosition(NATIVE_FAST_LOCATION_OPTIONS),
+        600,
+      );
+      if (pos?.coords) return { position: pos, fast: true };
+    } catch {
+      // Fast cache miss
+    }
+    return null;
+  }
+  if (navigator.geolocation) {
+    try {
+      const pos = await withLocationTimeout(
+        new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, FAST_LOCATION_OPTIONS)),
+        600,
+      );
+      if (pos?.coords) return { position: pos, fast: true };
+    } catch {
+      // Fallback
+    }
+  }
+  return null;
+}
+
+async function requestPrecisePosition(deadlineMs = 3500) {
+  if (isNativeCapacitor()) {
+    const Geolocation = await loadNativeGeolocation();
+    if (!Geolocation) return { error: { code: 2 } };
+    try {
+      const permissions = await Geolocation.checkPermissions();
+      let locationPermission = permissions?.location;
+      if (locationPermission === "prompt") {
+        locationPermission = (await Geolocation.requestPermissions())?.location;
+      }
+      if (locationPermission && locationPermission !== "granted") return { error: { code: 1 } };
+
+      const pos = await withLocationTimeout(
+        Geolocation.getCurrentPosition(NATIVE_PRECISE_LOCATION_OPTIONS),
+        deadlineMs,
+      );
+      return { position: pos, precise: true };
+    } catch (error) {
+      return { error: normalizeNativeLocationError(error) };
+    }
+  }
+  if (!navigator.geolocation) return { error: { code: 2 } };
+  return new Promise((resolve) => {
+    let finished = false;
+    const timer = window.setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      resolve({ error: { code: 3 } });
+    }, deadlineMs);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        resolve({ position: pos, precise: true });
+      },
+      (err) => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        resolve({ error: err?.code ? err : { code: 2 } });
+      },
+      PRECISE_LOCATION_OPTIONS,
+    );
+  });
+}
+
+function renderUserMarkerOnMap(point, { refining = false, precise = false, animate = true } = {}) {
+  if (!mapState.instance || !window.L) return;
+  mapState.userPosition = point;
+  mapState.isRefining = refining;
+  mapState.isPrecise = precise;
+
+  if (mapState.userMarker) {
+    mapState.userMarker.setLatLng(point);
+    mapState.userMarker.setIcon(userMarkerIcon(window.L, { refining, precise }));
+  } else {
+    mapState.userMarker = window.L.marker(point, {
+      icon: userMarkerIcon(window.L, { refining, precise }),
+    }).addTo(mapState.instance);
   }
 
-  mapState.locationPending = true;
-  const showPosition = (position, { cached = false } = {}) => {
-    const { coords } = position;
-    const point = [coords.latitude, coords.longitude];
-    const capturedAt = Number.isFinite(position.timestamp) ? position.timestamp : Date.now();
-    const age = Math.max(0, Date.now() - capturedAt);
-    mapState.userPosition = point;
-    if (!cached) {
-      saveStorage(locationStorageKey, {
-        lat: Math.round(point[0] * 10000) / 10000,
-        lng: Math.round(point[1] * 10000) / 10000,
-        timestamp: capturedAt,
+  if (animate) {
+    mapState.instance.panTo(point, { animate: true, duration: 0.45 });
+  }
+}
+
+async function fetchIpLocation() {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 1200);
+  try {
+    const response = await fetch("https://ipwho.is/", {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+        return {
+          lat: data.latitude,
+          lng: data.longitude,
+          city: data.city || "Gần bạn",
+          source: "ip",
+        };
+      }
+    }
+  } catch {
+    try {
+      const localRes = await fetch("/api/v1/geoip", {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
       });
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        if (Number.isFinite(localData.lat) && Number.isFinite(localData.lng)) {
+          return {
+            lat: localData.lat,
+            lng: localData.lng,
+            city: localData.city || "Hà Nội",
+            source: "ip-local",
+          };
+        }
+      }
+    } catch {
+      /* ignore */
     }
-    if (mapState.userMarker) mapState.userMarker.setLatLng(point);
-    else mapState.userMarker = window.L.marker(point, { icon: userMarkerIcon(window.L) }).addTo(mapState.instance);
-    mapState.instance.setView(point, 14, { animate: !cached });
-    mapState.hasLocatedUser = !cached || age <= FRESH_LOCATION_MAX_AGE;
-    return age;
-  };
+  } finally {
+    window.clearTimeout(timer);
+  }
+  return null;
+}
 
-  const finishError = (error) => {
-    mapState.locationPending = false;
-    const messages = {
-      1: "Bạn chưa cấp quyền vị trí cho trình duyệt",
-      2: "Chưa xác định được vị trí thiết bị",
-      3: "Định vị mất quá nhiều thời gian",
-    };
-    const message = messages[error.code] || "Không thể định vị thiết bị";
-    updateMapCaption(`${message} · ${mapState.userPosition ? "đang giữ vị trí gần đây" : "đang hiển thị khu vực mặc định"}`);
-    if (!silent) showToast(message, "error");
-  };
+let locationPrefetchPromise = null;
 
-  const finishFresh = (position) => {
-    showPosition(position);
-    mapState.locationPending = false;
-    updateMapCaption("Vị trí của bạn · quán đã lưu được ghim trên bản đồ");
-    if (!silent) showToast("Đã định vị thiết bị", "success");
-  };
-
-  const requestFresh = () => {
-    updateMapCaption(mapState.userPosition ? "Vị trí gần đây · đang cập nhật vị trí mới…" : "Đang lấy vị trí nhanh · bản đồ vẫn sẵn sàng…");
-    navigator.geolocation.getCurrentPosition(finishFresh, finishError, FRESH_LOCATION_OPTIONS);
-  };
-
-  const acceptCached = (position) => {
-    const age = showPosition(position, { cached: true });
-    if (age <= FRESH_LOCATION_MAX_AGE) {
-      mapState.locationPending = false;
-      updateMapCaption("Vị trí gần đây · bản đồ đã sẵn sàng");
-      if (!silent) showToast("Đã dùng vị trí gần đây", "success");
-      return;
+function startLocationPrefetch() {
+  if (locationPrefetchPromise) return locationPrefetchPromise;
+  locationPrefetchPromise = (async () => {
+    const fast = await requestFastPosition();
+    if (fast?.position?.coords) {
+      const pt = [fast.position.coords.latitude, fast.position.coords.longitude];
+      mapState.userPosition = pt;
+      saveStorage(locationStorageKey, {
+        lat: Math.round(pt[0] * 10000) / 10000,
+        lng: Math.round(pt[1] * 10000) / 10000,
+        timestamp: Date.now(),
+      });
+      return fast;
     }
-    requestFresh();
-  };
+    const ip = await fetchIpLocation();
+    if (ip) {
+      const pt = [ip.lat, ip.lng];
+      mapState.userPosition = pt;
+      saveStorage(locationStorageKey, {
+        lat: Math.round(pt[0] * 10000) / 10000,
+        lng: Math.round(pt[1] * 10000) / 10000,
+        timestamp: Date.now(),
+      });
+      return { position: { coords: { latitude: ip.lat, longitude: ip.lng } }, fast: true };
+    }
+    return requestPrecisePosition(1500);
+  })();
+  return locationPrefetchPromise;
+}
 
-  const handleCachedError = (error) => {
-    if (error.code === 1) finishError(error);
-    else requestFresh();
-  };
+async function locateDevice({ silent = false } = {}) {
+  if (!mapState.instance) return;
+  if (mapState.locationPending) return;
 
-  updateMapCaption(mapState.userPosition ? "Vị trí gần đây · kiểm tra cập nhật mới…" : "Đang kiểm tra vị trí đã cache…");
-  navigator.geolocation.getCurrentPosition(acceptCached, handleCachedError, CACHED_LOCATION_OPTIONS);
+  mapState.locationPending = true;
+  if (!silent) showToast("Đang xác định vị trí…", "success");
+
+  if (mapState.userPosition) {
+    renderUserMarkerOnMap(mapState.userPosition, { refining: true, precise: false, animate: !silent });
+    updateMapCaption("Đang làm mới vị trí…");
+  } else {
+    updateMapCaption("Đang định vị nhanh…");
+  }
+
+  try {
+    const ipPromise = fetchIpLocation();
+
+    // Fast-path: Update UI as soon as IP location responds (~50-150ms)
+    ipPromise.then((ipResult) => {
+      if (ipResult && !mapState.hasLocatedUser && (!mapState.userPosition || mapState.isRefining)) {
+        const pt = [ipResult.lat, ipResult.lng];
+        saveStorage(locationStorageKey, {
+          lat: Math.round(pt[0] * 10000) / 10000,
+          lng: Math.round(pt[1] * 10000) / 10000,
+          timestamp: Date.now(),
+        });
+        renderUserMarkerOnMap(pt, { refining: true, precise: false, animate: true });
+        updateMapCaption(`Khu vực ${escapeHtml(ipResult.city)} · đang tinh chỉnh…`);
+      }
+    });
+
+    // Check GPS with hard 1.5s deadline
+    let gpsResult = null;
+    try {
+      gpsResult = await withLocationTimeout(
+        requestFastPosition().then((fast) => {
+          if (fast?.position?.coords) return fast;
+          return requestPrecisePosition(1200);
+        }),
+        GPS_HARD_DEADLINE_MS,
+      );
+    } catch {
+      // GPS timed out (>1.5s) or unsupported; fallback seamlessly
+    }
+
+    if (gpsResult?.position?.coords) {
+      const { latitude, longitude } = gpsResult.position.coords;
+      const pt = [latitude, longitude];
+      saveStorage(locationStorageKey, {
+        lat: Math.round(pt[0] * 10000) / 10000,
+        lng: Math.round(pt[1] * 10000) / 10000,
+        timestamp: Date.now(),
+      });
+      renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
+      mapState.hasLocatedUser = true;
+      updateMapCaption("Vị trí chính xác · quán đã lưu được ghim trên bản đồ");
+      if (!silent) showToast("Đã định vị chính xác", "success");
+    } else {
+      // Fallback to IP or cached / saved places centroid
+      const ipResult = await ipPromise;
+      if (ipResult) {
+        const pt = [ipResult.lat, ipResult.lng];
+        renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
+        updateMapCaption(`Vị trí khu vực ${escapeHtml(ipResult.city)} · bản đồ đã sẵn sàng`);
+        if (!silent) showToast(`Đã định vị khu vực ${ipResult.city}`, "success");
+      } else if (mapState.userPosition) {
+        renderUserMarkerOnMap(mapState.userPosition, { refining: false, precise: true, animate: false });
+        updateMapCaption("Vị trí gần đây · bản đồ đã sẵn sàng");
+      } else {
+        const saved = places.filter((p) => isSaved(p.id));
+        if (saved.length && window.L && mapState.instance) {
+          const bounds = window.L.latLngBounds(saved.map((p) => [p.lat, p.lng]));
+          mapState.instance.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+        }
+        updateMapCaption("Đã hiển thị khu vực các quán ăn");
+      }
+    }
+  } finally {
+    mapState.locationPending = false;
+  }
 }
 
 async function initInteractiveMap() {
@@ -630,6 +1041,25 @@ function handleAction(event) {
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
     case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
+    case "switch-city": {
+      const cityKey = target.dataset.city;
+      const city = CITIES[cityKey];
+      if (city && mapState.instance) {
+        mapState.instance.setView(city.center, city.zoom, { animate: true });
+        updateMapCaption(`Khu vực: ${city.name}`);
+        showToast(`Đã chuyển sang ${city.name}`, "success");
+      }
+      break;
+    }
+    case "fit-saved": {
+      const saved = places.filter((p) => isSaved(p.id));
+      if (saved.length && mapState.instance && window.L) {
+        const bounds = window.L.latLngBounds(saved.map((p) => [p.lat, p.lng]));
+        mapState.instance.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+        showToast("Đã căn chỉnh theo các quán đã lưu", "success");
+      }
+      break;
+    }
     case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; state.selectedShareFriends = new Set(); renderModal(); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "open-note": state.modal = { type: "note", placeId: target.dataset.placeId }; renderModal(); break;
@@ -662,7 +1092,8 @@ function toggleSave(placeId) {
     state.saved = [...state.saved, placeId];
     showToast(`Đã lưu ${place.name}`, "success");
   }
-  saveStorage(storageKey, state.saved);
+  saveLocalState();
+  scheduleBackendSync();
   if (state.modal?.type === "place") renderModal();
   renderApp();
 }
@@ -670,7 +1101,8 @@ function toggleSave(placeId) {
 function saveNote(placeId) {
   const input = document.querySelector("#note-input");
   state.notes[placeId] = input?.value.trim() || "";
-  saveStorage(notesKey, state.notes);
+  saveLocalState();
+  scheduleBackendSync();
   state.modal = { type: "place", placeId };
   showToast("Đã lưu ghi chú riêng", "success");
   renderModal();
@@ -690,6 +1122,8 @@ function createCollection() {
   if (!name?.trim()) return;
   const id = `collection-${Date.now()}`;
   state.collections.push({ id, name: name.trim(), count: 0 });
+  saveLocalState();
+  scheduleBackendSync();
   state.selectedCollection = id;
   state.view = "saved";
   showToast(`Đã tạo collection “${name.trim()}”`, "success");
@@ -728,8 +1162,12 @@ window.addEventListener("beforeinstallprompt", (event) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    navigator.serviceWorker.register("./sw.js").catch(() => undefined);
   });
 }
 
+loadLeaflet().catch(() => undefined);
+loadNativeGeolocation().catch(() => undefined);
 renderApp();
+startLocationPrefetch();
+bootstrapBackend();

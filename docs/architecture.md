@@ -2,6 +2,18 @@
 
 ## API contract
 
+### MVP shared state API
+
+The local server exposes a small cross-platform state API so the browser/PWA and Capacitor shell execute the same persistence path:
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/health` | Kiểm tra API có sẵn |
+| GET | `/api/v1/state` | Đọc saved places, notes và collections của thiết bị |
+| PUT | `/api/v1/state` | Ghi snapshot state đã được validate và giới hạn kích thước |
+
+The demo server identifies a client with `X-EatWithMe-User` and persists state atomically in `db/runtime-state.json`. This is deliberately a transport/persistence adapter for the MVP, not an authentication system; production should replace it with JWT + PostgreSQL/RLS while keeping the client contract.
+
 | Method | Endpoint | Mục đích |
 | --- | --- | --- |
 | GET | `/v1/places/autocomplete?input=&sessionToken=` | Proxy Autocomplete (New) |

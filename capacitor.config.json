@@ -1,0 +1,6 @@
+{
+  "appId": "com.notisora.eatwithme",
+  "appName": "EatWithMe",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
