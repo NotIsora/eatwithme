@@ -1,15 +1,26 @@
 // Bump this whenever the app shell changes so an older cached app.js cannot
 // hide newly shipped features such as the interactive map.
-const CACHE_NAME = "eatwithme-shell-v6";
+const CACHE_NAME = "eatwithme-shell-v10";
 const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/app.js",
-  "/manifest.webmanifest",
-  "/icon.svg",
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js",
+  "./manifest.webmanifest",
+  "./icon.svg",
 ];
-const NETWORK_FIRST_PATHS = new Set(["/", "/index.html", "/styles.css", "/app.js", "/sw.js"]);
+const NETWORK_FIRST_PATHS = new Set([
+  "",
+  "/",
+  "index.html",
+  "/index.html",
+  "styles.css",
+  "/styles.css",
+  "app.js",
+  "/app.js",
+  "sw.js",
+  "/sw.js",
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -28,6 +39,11 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const requestUrl = new URL(event.request.url);
+  // State is server-authoritative; never serve or persist API responses from the app shell cache.
+  if (requestUrl.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   if (NETWORK_FIRST_PATHS.has(requestUrl.pathname)) {
     event.respondWith(
       fetch(event.request).then((response) => {
