@@ -271,13 +271,13 @@ const NATIVE_FAST_LOCATION_OPTIONS = {
 };
 const PRECISE_LOCATION_OPTIONS = {
   enableHighAccuracy: true,
-  timeout: 3500,
-  maximumAge: 60 * 1000,
+  timeout: 8000,
+  maximumAge: 15000,
 };
 const NATIVE_PRECISE_LOCATION_OPTIONS = {
   enableHighAccuracy: true,
-  timeout: 3500,
-  maximumAge: 60 * 1000,
+  timeout: 8000,
+  maximumAge: 15000,
 };
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
@@ -846,29 +846,47 @@ let locationPrefetchPromise = null;
 function startLocationPrefetch() {
   if (locationPrefetchPromise) return locationPrefetchPromise;
   locationPrefetchPromise = (async () => {
-    const fast = await requestFastPosition();
-    if (fast?.position?.coords) {
-      const pt = [fast.position.coords.latitude, fast.position.coords.longitude];
-      mapState.userPosition = pt;
-      saveStorage(locationStorageKey, {
-        lat: Math.round(pt[0] * 10000) / 10000,
-        lng: Math.round(pt[1] * 10000) / 10000,
-        timestamp: Date.now(),
-      });
-      return fast;
+    try {
+      const gps = await requestPrecisePosition(6000);
+      if (gps?.position?.coords) {
+        const { latitude, longitude, accuracy } = gps.position.coords;
+        const pt = [latitude, longitude];
+        mapState.userPosition = pt;
+        mapState.hasLocatedUser = true;
+        saveStorage(locationStorageKey, {
+          lat: Math.round(pt[0] * 10000) / 10000,
+          lng: Math.round(pt[1] * 10000) / 10000,
+          accuracy: Math.round(accuracy || 0),
+          isPrecise: true,
+          timestamp: Date.now(),
+        });
+        if (mapState.instance) {
+          renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
+          updateMapCaption(`Vị trí chính xác · độ chuẩn ±${Math.round(accuracy || 10)}m`);
+        }
+        return gps;
+      }
+    } catch {
+      /* ignore */
     }
+
     const ip = await fetchIpLocation();
-    if (ip) {
+    if (ip && !mapState.hasLocatedUser) {
       const pt = [ip.lat, ip.lng];
       mapState.userPosition = pt;
       saveStorage(locationStorageKey, {
         lat: Math.round(pt[0] * 10000) / 10000,
         lng: Math.round(pt[1] * 10000) / 10000,
+        isPrecise: false,
         timestamp: Date.now(),
       });
+      if (mapState.instance) {
+        renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
+        updateMapCaption(`Vị trí khu vực (${escapeHtml(ip.city)})`);
+      }
       return { position: { coords: { latitude: ip.lat, longitude: ip.lng } }, fast: true };
     }
-    return requestPrecisePosition(1500);
+    return null;
   })();
   return locationPrefetchPromise;
 }
@@ -878,76 +896,46 @@ async function locateDevice({ silent = false } = {}) {
   if (mapState.locationPending) return;
 
   mapState.locationPending = true;
-  if (!silent) showToast("Đang xác định vị trí…", "success");
+  if (!silent) showToast("Đang lấy tọa độ GPS chính xác…", "success");
 
   if (mapState.userPosition) {
     renderUserMarkerOnMap(mapState.userPosition, { refining: true, precise: false, animate: !silent });
-    updateMapCaption("Đang làm mới vị trí…");
+    updateMapCaption("Đang tìm tín hiệu GPS chính xác…");
   } else {
-    updateMapCaption("Đang định vị nhanh…");
+    updateMapCaption("Đang tìm kiếm vệ tinh GPS & Wi-Fi…");
   }
 
   try {
-    const ipPromise = fetchIpLocation();
-
-    // Fast-path: Update UI as soon as IP location responds (~50-150ms)
-    ipPromise.then((ipResult) => {
-      if (ipResult && !mapState.hasLocatedUser && (!mapState.userPosition || mapState.isRefining)) {
-        const pt = [ipResult.lat, ipResult.lng];
-        saveStorage(locationStorageKey, {
-          lat: Math.round(pt[0] * 10000) / 10000,
-          lng: Math.round(pt[1] * 10000) / 10000,
-          timestamp: Date.now(),
-        });
-        renderUserMarkerOnMap(pt, { refining: true, precise: false, animate: true });
-        updateMapCaption(`Khu vực ${escapeHtml(ipResult.city)} · đang tinh chỉnh…`);
-      }
-    });
-
-    // Check GPS with hard 1.5s deadline
-    let gpsResult = null;
-    try {
-      gpsResult = await withLocationTimeout(
-        requestFastPosition().then((fast) => {
-          if (fast?.position?.coords) return fast;
-          return requestPrecisePosition(1200);
-        }),
-        GPS_HARD_DEADLINE_MS,
-      );
-    } catch {
-      // GPS timed out (>1.5s) or unsupported; fallback seamlessly
-    }
+    const gpsResult = await requestPrecisePosition(8000);
 
     if (gpsResult?.position?.coords) {
-      const { latitude, longitude } = gpsResult.position.coords;
+      const { latitude, longitude, accuracy } = gpsResult.position.coords;
       const pt = [latitude, longitude];
+      mapState.userPosition = pt;
+      mapState.hasLocatedUser = true;
       saveStorage(locationStorageKey, {
         lat: Math.round(pt[0] * 10000) / 10000,
         lng: Math.round(pt[1] * 10000) / 10000,
+        accuracy: Math.round(accuracy || 0),
+        isPrecise: true,
         timestamp: Date.now(),
       });
       renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
-      mapState.hasLocatedUser = true;
-      updateMapCaption("Vị trí chính xác · quán đã lưu được ghim trên bản đồ");
-      if (!silent) showToast("Đã định vị chính xác", "success");
+      mapState.instance.setView(pt, 15, { animate: true });
+      updateMapCaption(`Vị trí chính xác (độ chuẩn ±${Math.round(accuracy || 10)}m)`);
+      if (!silent) showToast("Đã định vị chính xác vị trí của bạn", "success");
     } else {
-      // Fallback to IP or cached / saved places centroid
-      const ipResult = await ipPromise;
-      if (ipResult) {
-        const pt = [ipResult.lat, ipResult.lng];
-        renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
-        updateMapCaption(`Vị trí khu vực ${escapeHtml(ipResult.city)} · bản đồ đã sẵn sàng`);
-        if (!silent) showToast(`Đã định vị khu vực ${ipResult.city}`, "success");
-      } else if (mapState.userPosition) {
-        renderUserMarkerOnMap(mapState.userPosition, { refining: false, precise: true, animate: false });
-        updateMapCaption("Vị trí gần đây · bản đồ đã sẵn sàng");
+      const ip = await fetchIpLocation();
+      if (ip) {
+        const pt = [ip.lat, ip.lng];
+        renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
+        mapState.instance.setView(pt, 13, { animate: true });
+        updateMapCaption(`Không bắt được GPS · vị trí mạng: ${escapeHtml(ip.city)}`);
+        if (!silent) showToast(`Không bắt được GPS · dùng vị trí mạng ${ip.city}`, "error");
       } else {
-        const saved = places.filter((p) => isSaved(p.id));
-        if (saved.length && window.L && mapState.instance) {
-          const bounds = window.L.latLngBounds(saved.map((p) => [p.lat, p.lng]));
-          mapState.instance.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
-        }
-        updateMapCaption("Đã hiển thị khu vực các quán ăn");
+        const msg = gpsResult?.error?.code === 1 ? "Bạn chưa cấp quyền vị trí cho trình duyệt" : "Không thể lấy tọa độ GPS thiết bị";
+        updateMapCaption(msg);
+        if (!silent) showToast(msg, "error");
       }
     }
   } finally {
