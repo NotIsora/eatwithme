@@ -250,8 +250,9 @@ const state = {
 function resolveBackendBaseUrl() {
   const configured = String(window.EATWITHME_API_BASE || readStorage("eatwithme.api-base.v1", "") || "").trim();
   if (configured) return configured.replace(/\/+$/, "");
-  // Browser/PWA: same-origin API. Native shells must set EATWITHME_API_BASE
-  // to the reachable HTTPS/LAN API host because capacitor://localhost has no API route.
+  // GitHub Pages is a static hosting platform without backend APIs
+  if (typeof window !== "undefined" && window.location?.hostname?.endsWith("github.io")) return null;
+  // Browser/PWA: same-origin API on localhost, custom domains, or Vercel
   if (/^https?:$/.test(window.location.protocol)) return `${window.location.origin}/api`;
   return null;
 }
@@ -616,6 +617,7 @@ function escapeHtml(value) {
 
 function icon(name) { return `<span aria-hidden="true">${ICONS[name] || "•"}</span>`; }
 function getPlace(id) { return places.find((place) => place.id === id); }
+function isSaved(id) { return state.saved.includes(id); }
 function initials(name) {
   if (!name || name === "Eat with me") return "EW";
   return name.split(" ").map((word) => word[0]).slice(-2).join("").toUpperCase();
@@ -764,12 +766,43 @@ function renderHero() {
         <p>Gom những quán bạn yêu, những món bạn muốn thử và những lời rủ rê không nên bỏ lỡ.</p>
         <div class="hero-actions"><button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button><button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu</button></div>
       </div>
-      <div class="hero-aside"><div class="eyebrow">Bản đồ bạn bè</div><h3>Mai vừa lưu một chỗ hẹn cuối tuần.</h3><p>Khám phá những nơi đang được nhóm bạn của bạn nhắc đến nhiều nhất.</p><div class="mini-avatars">${friends.slice(0, 3).map((friend) => avatar(friend)).join("")}<span>+ 2 người bạn</span></div></div>
+      <div class="hero-aside">
+        <div class="eyebrow">Bản đồ ẩm thực</div>
+        <h3>Lưu lại từng quán ăn bạn yêu thích.</h3>
+        <p>Khám phá những nơi đang được nhóm bạn của bạn nhắc đến nhiều nhất.</p>
+        <div class="mini-avatars">
+          ${friends.length ? friends.slice(0, 3).map((friend) => avatar(friend)).join("") : avatar(state.user || { name: "Eat with me", color: "green" })}
+          <span>${friends.length ? `+ ${friends.length} người bạn` : "Khám phá cùng bạn bè"}</span>
+        </div>
+      </div>
     </section>`;
 }
 
 function renderStats() {
-  return `<section class="stat-row"><div class="stat-card"><div><div class="stat-value">${state.saved.length}</div><div class="stat-label">quán đã lưu</div></div><div class="stat-trend">+2 tháng này</div></div><div class="stat-card"><div><div class="stat-value">4</div><div class="stat-label">người bạn</div></div><div class="stat-trend">+1 mới</div></div><div class="stat-card"><div><div class="stat-value">7</div><div class="stat-label">lời rủ rê</div></div><div class="stat-trend">đang chờ bạn</div></div></section>`;
+  return `
+    <section class="stat-row">
+      <div class="stat-card">
+        <div>
+          <div class="stat-value">${state.saved.length}</div>
+          <div class="stat-label">quán đã lưu</div>
+        </div>
+        <div class="stat-trend">+${state.saved.length} địa điểm</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-value">${friends.length}</div>
+          <div class="stat-label">người bạn</div>
+        </div>
+        <div class="stat-trend">${friends.length ? "đang kết nối" : "kết bạn qua @tag"}</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-value">${customPlaces.length}</div>
+          <div class="stat-label">quán tự tạo</div>
+        </div>
+        <div class="stat-trend">ghim bản đồ</div>
+      </div>
+    </section>`;
 }
 
 function renderMapFallback() {
