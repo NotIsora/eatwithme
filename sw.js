@@ -1,6 +1,6 @@
 // Bump this whenever the app shell changes so an older cached app.js cannot
 // hide newly shipped features such as the interactive map.
-const CACHE_NAME = "eatwithme-shell-v13";
+const CACHE_NAME = "eatwithme-shell-v14";
 const APP_SHELL = [
   "./",
   "./index.html",
