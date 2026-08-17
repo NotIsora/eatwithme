@@ -140,22 +140,16 @@ function refreshPlaces() {
   places = [...customPlaces, ...defaultPlaces];
 }
 
-const friendsStorageKey = "eatwithme.friends.v1";
-const defaultFriends = [
-  { id: "mai", tag: "@maianh.foodie", name: "Mai Anh", initials: "MA", caption: "đã lưu 18 quán", color: "green" },
-  { id: "quan", tag: "@quanle.hanoi", name: "Quân Lê", initials: "QL", caption: "đã lưu 9 quán", color: "" },
-  { id: "linh", tag: "@linh.foodlover", name: "Linh Nguyễn", initials: "LN", caption: "đã lưu 24 quán", color: "green" },
-  { id: "minh", tag: "@minhpham.eat", name: "Minh Phạm", initials: "MP", caption: "đã lưu 7 quán", color: "" },
-];
+const friendsStorageKey = "eatwithme.friends.v2";
+const defaultFriends = [];
 
-let friends = readStorage(friendsStorageKey, defaultFriends);
+// Filter out any legacy mock friends if present in older storage
+let friends = (readStorage(friendsStorageKey, []) || []).filter(
+  (f) => f && !["mai", "quan", "linh", "minh"].includes(f.id)
+);
 
-const claimedTagsKey = "eatwithme.claimed_tags.v1";
+const claimedTagsKey = "eatwithme.claimed_tags.v2";
 const defaultClaimedTags = {
-  "@maianh.foodie": "mai",
-  "@quanle.hanoi": "quan",
-  "@linh.foodlover": "linh",
-  "@minhpham.eat": "minh",
   "@eatwithme": "current_user",
 };
 
@@ -220,11 +214,7 @@ function getUserTag(user) {
   return "@eatwithme";
 }
 
-const activities = [
-  { friend: friends[0], place: defaultPlaces[1], time: "12 phút trước", text: "đã lưu" },
-  { friend: friends[1], place: defaultPlaces[2], time: "1 giờ trước", text: "đã chia sẻ" },
-  { friend: friends[2], place: defaultPlaces[0], time: "hôm qua", text: "đã lưu" },
-];
+const activities = [];
 
 const initialSaved = [defaultPlaces[0].id, defaultPlaces[1].id];
 const storageKey = "eatwithme.saved.v1";
@@ -809,7 +799,40 @@ function renderMap() {
 }
 
 function renderActivity() {
-  return `<section class="panel"><div class="panel-header"><div><h2>Bạn bè đang ăn gì</h2><p>Những gợi ý mới nhất từ nhóm của bạn</p></div><button class="text-button" data-action="navigate" data-view="friends">Xem tất cả ${icon("arrow")}</button></div><div class="friend-feed">${activities.map((activity) => `<div class="friend-card">${avatar(activity.friend)}<div class="friend-text"><strong>${escapeHtml(activity.friend.name)}</strong> ${activity.text} <strong>${escapeHtml(activity.place.name)}</strong><div class="friend-meta">${escapeHtml(activity.time)} · ${escapeHtml(activity.place.category)}</div></div>${placePhoto(activity.place).replace('place-photo', 'friend-thumb')}</div>`).join("")}</div></section>`;
+  return `
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Bạn bè đang ăn gì</h2>
+          <p>Những gợi ý mới nhất từ nhóm của bạn</p>
+        </div>
+        <button class="text-button" data-action="navigate" data-view="friends">Xem tất cả ${icon("arrow")}</button>
+      </div>
+      ${activities.length ? `
+        <div class="friend-feed">
+          ${activities.map((activity) => `
+            <div class="friend-card">
+              ${avatar(activity.friend)}
+              <div class="friend-text">
+                <strong>${escapeHtml(activity.friend.name)}</strong> ${activity.text} <strong>${escapeHtml(activity.place.name)}</strong>
+                <div class="friend-meta">${escapeHtml(activity.time)} · ${escapeHtml(activity.place.category)}</div>
+              </div>
+              ${placePhoto(activity.place).replace('place-photo', 'friend-thumb')}
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div class="empty-state" style="padding:28px 16px;">
+          <div class="empty-mark">👥</div>
+          <h3 style="font-size:15px;margin-bottom:4px;">Chưa có hoạt động bạn bè</h3>
+          <p class="muted" style="font-size:12px;max-width:260px;margin:0 auto 12px;">Kết bạn bằng @tag để cùng nhau chia sẻ quán ăn và thấy gợi ý mới nhất.</p>
+          <button class="primary-button" data-action="navigate" data-view="friends" style="font-size:12px;padding:8px 14px;margin:0 auto;">
+            ＋ Kết bạn qua @tag
+          </button>
+        </div>
+      `}
+    </section>
+  `;
 }
 
 function renderSearchPanel() {
@@ -834,7 +857,7 @@ function renderSaved() {
   return `
     <div class="page-title-row">
       <div>
-        <div class="eyebrow">Kho lưu trữ của An</div>
+        <div class="eyebrow">Kho lưu trữ ẩm thực</div>
         <h1>Quán đã lưu</h1>
         <p>Những quán bạn muốn quay lại, lưu trữ riêng hoặc tự thêm bằng tay.</p>
       </div>
@@ -886,7 +909,7 @@ function renderFriends() {
       <div>
         <div class="eyebrow">Kết nối & Tag bạn bè</div>
         <h1>Bạn bè</h1>
-        <p>Tìm kiếm qua @tag phong cách Instagram để cùng lập danh sách quán ăn.</p>
+        <p>Tìm kiếm qua @tag từ máy chủ để cùng lập danh sách quán ăn.</p>
       </div>
       <button class="primary-button" data-action="focus-add-friend">${icon("add")} Kết bạn qua @tag</button>
     </div>
@@ -923,25 +946,38 @@ function renderFriends() {
         </div>
 
         <form class="add-friend-bar" onsubmit="event.preventDefault();" style="display:flex;gap:8px;margin-bottom:16px;">
-          <input id="friend-tag-input" class="form-input" type="text" placeholder="Nhập @tag bạn bè (vd: @maianh.foodie, @quanle.hanoi)..." autocomplete="off" />
+          <input id="friend-tag-input" class="form-input" type="text" placeholder="Nhập @tag bạn bè từ máy chủ (vd: @eatwithme)..." autocomplete="off" />
           <button type="button" class="primary-button" data-action="add-friend-by-tag" style="white-space:nowrap;padding:10px 16px;">+ Kết bạn</button>
         </form>
 
-        <div class="friend-list-large">
-          ${friends.map((friend) => `
-            <div class="person-row">
-              ${avatar(friend)}
-              <div class="person-copy">
-                <strong>
-                  ${escapeHtml(friend.name)}
-                  <span class="friend-tag-badge">${escapeHtml(friend.tag || `@${friend.id}`)}</span>
-                </strong>
-                <span>${escapeHtml(friend.caption)}</span>
+        ${friends.length ? `
+          <div class="friend-list-large">
+            ${friends.map((friend) => `
+              <div class="person-row">
+                ${avatar(friend)}
+                <div class="person-copy">
+                  <strong>
+                    ${escapeHtml(friend.name)}
+                    <span class="friend-tag-badge">${escapeHtml(friend.tag || `@${friend.id}`)}</span>
+                  </strong>
+                  <span>${escapeHtml(friend.caption || "bạn bè đã kết nối")}</span>
+                </div>
+                <button class="secondary-button" data-action="view-friend" data-friend-id="${friend.id}">Xem quán</button>
               </div>
-              <button class="secondary-button" data-action="view-friend" data-friend-id="${friend.id}">Xem quán</button>
-            </div>
-          `).join("")}
-        </div>
+            `).join("")}
+          </div>
+        ` : `
+          <div class="empty-state" style="padding:36px 16px;">
+            <div class="empty-mark">👥</div>
+            <h3 style="font-size:16px;margin-bottom:4px;">Chưa có bạn bè</h3>
+            <p class="muted" style="max-width:320px;margin:0 auto 16px;font-size:12.5px;">
+              Nhập @tag của bạn bè ở ô tìm kiếm phía trên để tìm tài khoản trên máy chủ, hoặc gửi tag <strong>${escapeHtml(myTag)}</strong> cho bạn bè để kết nối.
+            </p>
+            <button class="secondary-button" data-action="copy-my-tag" style="margin:0 auto;">
+              ${icon("share")} Sao chép @tag của tôi
+            </button>
+          </div>
+        `}
       </section>
 
       <aside class="invite-card">
@@ -954,12 +990,43 @@ function renderFriends() {
 }
 
 function renderInbox() {
-  const notifications = [
-    { person: friends[0], title: "Mai Anh đã chia sẻ một quán với bạn", body: "Pizza 4P’s Tràng Tiền · 12 phút trước", unread: true, placeId: places[1].id },
-    { person: friends[1], title: "Quân Lê đã gửi lời mời kết bạn", body: "1 giờ trước", unread: true },
-    { person: friends[2], title: "Linh Nguyễn vừa lưu cùng một quán", body: "Bún chả Hương Liên · hôm qua", unread: false, placeId: places[0].id },
-  ];
-  return `<div class="page-title-row"><div><div class="eyebrow">Bạn không bỏ lỡ gì cả</div><h1>Hộp thư</h1><p>Lời mời, lời rủ rê và những địa điểm được gửi đến bạn.</p></div><button class="secondary-button" data-action="mark-read">Đánh dấu đã đọc</button></div><section class="panel"><div class="inbox-list">${notifications.map((item) => `<div class="notification ${item.unread ? "unread" : ""}">${avatar(item.person)}<div><p><strong>${escapeHtml(item.title)}</strong></p><small>${escapeHtml(item.body)}</small></div>${item.unread ? '<span class="dot"></span>' : ''}${item.placeId ? `<button class="round-button" data-action="open-place" data-place-id="${item.placeId}" aria-label="Mở địa điểm">${icon("arrow")}</button>` : ""}</div>`).join("")}</div></section>`;
+  const notifications = [];
+  return `
+    <div class="page-title-row">
+      <div>
+        <div class="eyebrow">Bạn không bỏ lỡ gì cả</div>
+        <h1>Hộp thư</h1>
+        <p>Lời mời, lời rủ rê và những địa điểm được gửi đến bạn.</p>
+      </div>
+      <button class="secondary-button" data-action="mark-read">Đánh dấu đã đọc</button>
+    </div>
+    <section class="panel">
+      ${notifications.length ? `
+        <div class="inbox-list">
+          ${notifications.map((item) => `
+            <div class="notification ${item.unread ? "unread" : ""}">
+              ${avatar(item.person)}
+              <div>
+                <p><strong>${escapeHtml(item.title)}</strong></p>
+                <small>${escapeHtml(item.body)}</small>
+              </div>
+              ${item.unread ? '<span class="dot"></span>' : ''}
+              ${item.placeId ? `<button class="round-button" data-action="open-place" data-place-id="${item.placeId}" aria-label="Mở địa điểm">${icon("arrow")}</button>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div class="empty-state" style="padding:36px 16px;">
+          <div class="empty-mark">✉</div>
+          <h3>Hộp thư trống</h3>
+          <p class="muted" style="max-width:320px;margin:0 auto 14px;">Khi bạn bè chia sẻ quán ăn hoặc gửi lời rủ rê, bạn sẽ nhận được thông báo tại đây.</p>
+          <button class="primary-button" data-action="navigate" data-view="friends" style="margin:0 auto;">
+            ＋ Kết nối bạn bè qua @tag
+          </button>
+        </div>
+      `}
+    </section>
+  `;
 }
 
 function renderMain() {
@@ -1803,7 +1870,35 @@ function copyMyTag() {
   }
 }
 
-function addFriendByTag() {
+async function syncUserProfileToServer() {
+  const user = state.user;
+  const tag = getUserTag(user);
+  const name = user?.name || "Eat with me";
+  const myId = user?.id || getBackendUserId();
+  try {
+    const res = await fetch("/api/v1/users/profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-EatWithMe-User": myId,
+      },
+      body: JSON.stringify({
+        id: myId,
+        name,
+        tag,
+        email: user?.email || null,
+        picture: user?.picture || null,
+      }),
+    });
+    if (res.ok) {
+      console.log("Synced profile to server:", tag);
+    }
+  } catch (e) {
+    // Offline or static serverless
+  }
+}
+
+async function addFriendByTag() {
   const input = document.querySelector("#friend-tag-input");
   let val = input?.value.trim();
   if (!val) {
@@ -1824,6 +1919,37 @@ function addFriendByTag() {
     return;
   }
 
+  showToast(`Đang tìm kiếm ${val} trên máy chủ...`, "info");
+
+  try {
+    const res = await fetch(`/api/v1/users/search?tag=${encodeURIComponent(cleanTag)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.ok && json.user) {
+        const sUser = json.user;
+        const newFriend = {
+          id: sUser.id || `friend-${Date.now()}`,
+          tag: sUser.tag || val,
+          name: sUser.name || val.replace(/^@/, ""),
+          initials: initials(sUser.name || val.replace(/^@/, "")),
+          caption: "người dùng đã xác thực từ máy chủ",
+          color: "green",
+          picture: sUser.picture || null,
+        };
+
+        friends = [newFriend, ...friends];
+        saveStorage(friendsStorageKey, friends);
+        if (input) input.value = "";
+        renderApp();
+        showToast(`Đã tìm thấy & kết bạn với ${newFriend.name} (${val})! 🎉`, "success");
+        return;
+      }
+    }
+  } catch (e) {
+    // offline or static host fallback
+  }
+
+  // Fallback if server doesn't have it or offline
   const baseName = val.replace(/^@/, "").replace(/[._]/g, " ").trim();
   const capitalizedName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
   const newFriend = {
@@ -1839,7 +1965,7 @@ function addFriendByTag() {
   saveStorage(friendsStorageKey, friends);
   if (input) input.value = "";
   renderApp();
-  showToast(`Đã kết bạn với ${val} thành công! 🎉`, "success");
+  showToast(`Đã kết bạn với ${val}! 🎉`, "success");
 }
 
 function saveProfileInfo() {
@@ -1848,7 +1974,7 @@ function saveProfileInfo() {
   const newName = nameInput?.value.trim() || state.user?.name || "Eat with me";
   const rawTag = tagInput?.value.trim() || state.user?.tag || "@eatwithme";
 
-  const myId = state.user?.id || "current_user";
+  const myId = state.user?.id || getBackendUserId();
   const check = checkTagAvailability(rawTag, myId);
 
   if (!check.valid) {
@@ -1883,6 +2009,7 @@ function saveProfileInfo() {
 
   saveStorage(googleUserKey, state.user);
   saveLocalState();
+  syncUserProfileToServer();
   state.modal = null;
   renderApp();
   showToast(`Đã lưu tag độc nhất: ${finalTag}!`, "success");
@@ -2021,7 +2148,35 @@ function renderNoteModal(placeId) {
 
 function renderShareModal(placeId) {
   const place = getPlace(placeId);
-  return `<div class="modal-backdrop" data-action="close-modal"><article class="modal" role="dialog" aria-modal="true" aria-label="Chia sẻ ${escapeHtml(place.name)}" data-modal-card><div class="modal-content"><div class="eyebrow">Gửi một lời rủ rê</div><h2>Chia sẻ ${escapeHtml(place.name)}</h2><p class="muted">Chọn người bạn muốn rủ đi cùng.</p><div class="share-list">${friends.map((friend) => `<button class="share-person ${state.selectedShareFriends.has(friend.id) ? "selected" : ""}" data-action="toggle-share-friend" data-friend-id="${friend.id}">${avatar(friend)}<span>${escapeHtml(friend.name)}</span><span class="check">${icon("check")}</span></button>`).join("")}</div><div class="modal-footer"><button class="secondary-button" data-action="close-modal">Hủy</button><button class="primary-button" data-action="confirm-share" data-place-id="${place.id}">Gửi lời rủ rê ${icon("share")}</button></div></div></article></div>`;
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Chia sẻ ${escapeHtml(place.name)}" data-modal-card>
+        <div class="modal-content">
+          <div class="eyebrow">Gửi một lời rủ rê</div>
+          <h2>Chia sẻ ${escapeHtml(place.name)}</h2>
+          <p class="muted">Chọn người bạn muốn rủ đi cùng.</p>
+          ${friends.length ? `
+            <div class="share-list">
+              ${friends.map((friend) => `<button class="share-person ${state.selectedShareFriends.has(friend.id) ? "selected" : ""}" data-action="toggle-share-friend" data-friend-id="${friend.id}">${avatar(friend)}<span>${escapeHtml(friend.name)}</span><span class="check">${icon("check")}</span></button>`).join("")}
+            </div>
+            <div class="modal-footer">
+              <button class="secondary-button" data-action="close-modal">Hủy</button>
+              <button class="primary-button" data-action="confirm-share" data-place-id="${place.id}">Gửi lời rủ rê ${icon("share")}</button>
+            </div>
+          ` : `
+            <div class="empty-state" style="padding:24px 12px;margin-bottom:12px;">
+              <div class="empty-mark">👥</div>
+              <h3 style="font-size:15px;margin-bottom:4px;">Chưa có bạn bè trong danh sách</h3>
+              <p class="muted" style="font-size:12px;max-width:280px;margin:0 auto 12px;">Hãy kết bạn qua @tag ở mục Bạn bè để có thể rủ nhau đi ăn.</p>
+              <button class="primary-button" data-action="focus-add-friend" style="margin:0 auto;font-size:12px;">＋ Thêm bạn bè qua @tag</button>
+            </div>
+            <div class="modal-footer">
+              <button class="secondary-button" data-action="close-modal" style="width:100%;">Đóng</button>
+            </div>
+          `}
+        </div>
+      </article>
+    </div>`;
 }
 
 function renderAddPlaceModal() {
@@ -2464,3 +2619,4 @@ initGoogleAuth();
 renderApp();
 startLocationPrefetch();
 bootstrapBackend();
+syncUserProfileToServer();

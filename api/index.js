@@ -2,11 +2,8 @@
 
 const memoryStore = {
   users: {},
+  user_profiles: {},
   tags: {
-    "@maianh.foodie": "mai",
-    "@quanle.hanoi": "quan",
-    "@linh.foodlover": "linh",
-    "@minhpham.eat": "minh",
     "@eatwithme": "current_user",
   },
 };
@@ -32,7 +29,7 @@ function sendJson(res, status, payload) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-EatWithMe-User");
-  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
   res.end(JSON.stringify(payload));
 }
 
@@ -45,7 +42,7 @@ export default async function handler(req, res) {
     res.statusCode = 204;
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-EatWithMe-User");
-    res.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
     res.end();
     return;
   }
@@ -64,6 +61,71 @@ export default async function handler(req, res) {
       lng: 105.8542,
       country: "VN",
     });
+  }
+
+  // User Search by Tag API
+  if (pathname === "/api/v1/users/search" && req.method === "GET") {
+    const raw = (url.searchParams.get("tag") || "").trim().toLowerCase();
+    const tag = raw.startsWith("@") ? raw : `@${raw}`;
+    const profiles = memoryStore.user_profiles || {};
+
+    let matched = null;
+    for (const [id, prof] of Object.entries(profiles)) {
+      if (prof.tag && prof.tag.toLowerCase() === tag) {
+        matched = { id, ...prof };
+        break;
+      }
+    }
+
+    if (matched) {
+      return sendJson(res, 200, { ok: true, user: matched });
+    } else {
+      return sendJson(res, 404, { ok: false, error: `Không tìm thấy người dùng có tag ${tag}` });
+    }
+  }
+
+  // User Profile Registration API
+  if (pathname === "/api/v1/users/profile" && req.method === "POST") {
+    const body = typeof req.body === "object" ? req.body : JSON.parse(req.body || "{}");
+    const myId = userIdFrom(req);
+    const name = String(body.name || "Eat with me").trim();
+    const rawTag = String(body.tag || "").trim().toLowerCase();
+    const tag = rawTag.startsWith("@") ? rawTag : `@${rawTag}`;
+    const email = body.email || null;
+    const picture = body.picture || null;
+
+    const profiles = memoryStore.user_profiles || {};
+
+    // Check conflict
+    for (const [id, prof] of Object.entries(profiles)) {
+      if (id !== myId && prof.tag && prof.tag.toLowerCase() === tag) {
+        return sendJson(res, 409, { ok: false, error: `Tag ${tag} đã có người sử dụng` });
+      }
+    }
+
+    const updatedProfile = {
+      id: myId,
+      name,
+      tag,
+      email,
+      picture,
+      updatedAt: new Date().toISOString(),
+    };
+
+    memoryStore.user_profiles[myId] = updatedProfile;
+    for (const [t, u] of Object.entries(memoryStore.tags)) {
+      if (u === myId) delete memoryStore.tags[t];
+    }
+    memoryStore.tags[tag] = myId;
+
+    return sendJson(res, 200, { ok: true, user: updatedProfile });
+  }
+
+  // List All Registered Users API
+  if (pathname === "/api/v1/users" && req.method === "GET") {
+    const profiles = memoryStore.user_profiles || {};
+    const list = Object.values(profiles).map(({ id, name, tag, picture, updatedAt }) => ({ id, name, tag, picture, updatedAt }));
+    return sendJson(res, 200, { ok: true, users: list, count: list.length });
   }
 
   // Tag Check API
