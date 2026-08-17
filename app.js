@@ -363,8 +363,175 @@ function isCachedLocationFresh() {
 
 mapState.userPosition = readCachedLocation();
 
+// --- LOCAL-FIRST PERSISTENT STORAGE ENGINE ---
+const DB_NAME = "EatWithMeDB";
+const DB_VERSION = 1;
+const DB_STORE = "user_data";
+
+let idbPromise = null;
+function getIndexedDb() {
+  if (idbPromise) return idbPromise;
+  idbPromise = new Promise((resolve) => {
+    if (!window.indexedDB) { resolve(null); return; }
+    try {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(DB_STORE)) {
+          db.createObjectStore(DB_STORE);
+        }
+      };
+      request.onsuccess = (event) => resolve(event.target.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+  return idbPromise;
+}
+
+async function idbSet(key, val) {
+  try {
+    const db = await getIndexedDb();
+    if (!db) return;
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).put(val, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function idbGet(key) {
+  try {
+    const db = await getIndexedDb();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, "readonly");
+      const req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Request persistent storage so browser never auto-clears user places
+async function requestPersistentStorage() {
+  if (navigator.storage && navigator.storage.persist) {
+    try {
+      const isPersisted = await navigator.storage.persisted();
+      if (!isPersisted) {
+        await navigator.storage.persist();
+      }
+    } catch {
+      // Ignored if unsupported
+    }
+  }
+}
+requestPersistentStorage();
+
 function saveStorage(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* demo mode */ }
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    idbSet(key, value);
+  } catch { /* demo mode */ }
+}
+
+function exportBackupData() {
+  try {
+    const customList = readStorage(customPlacesKey, []);
+    const backupObj = {
+      app: "EatWithMe",
+      version: "2.0",
+      exportedAt: new Date().toISOString(),
+      placesCount: customList.length,
+      customPlaces: customList,
+      saved: state.saved,
+      notes: state.notes,
+    };
+    const jsonStr = JSON.stringify(backupObj, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `EatWithMe_Backup_${dateStr}.json`;
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`Đã xuất file sao lưu “${filename}” về máy!`, "success");
+  } catch {
+    showToast("Không thể xuất file sao lưu", "error");
+  }
+}
+
+function importBackupFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const content = event.target.result;
+      const data = JSON.parse(content);
+
+      if (!data || typeof data !== "object") {
+        showToast("File sao lưu không hợp lệ", "error");
+        return;
+      }
+
+      const importedPlaces = Array.isArray(data.customPlaces) ? data.customPlaces : [];
+      const importedSaved = Array.isArray(data.saved) ? data.saved : [];
+      const importedNotes = data.notes && typeof data.notes === "object" ? data.notes : {};
+
+      if (importedPlaces.length === 0 && importedSaved.length === 0) {
+        showToast("File sao lưu không chứa dữ liệu quán ăn", "error");
+        return;
+      }
+
+      // Merge custom places (avoid duplicates by ID)
+      const currentCustom = readStorage(customPlacesKey, []);
+      const existingIds = new Set(currentCustom.map((p) => p.id));
+      let newCount = 0;
+
+      for (const p of importedPlaces) {
+        if (!existingIds.has(p.id)) {
+          currentCustom.unshift(p);
+          existingIds.add(p.id);
+          newCount++;
+        }
+      }
+
+      saveStorage(customPlacesKey, currentCustom);
+      refreshPlaces();
+
+      // Merge saved IDs
+      const savedSet = new Set(state.saved);
+      for (const id of importedSaved) {
+        savedSet.add(id);
+      }
+      state.saved = Array.from(savedSet);
+
+      // Merge notes
+      state.notes = { ...state.notes, ...importedNotes };
+
+      saveLocalState();
+      scheduleBackendSync();
+      renderApp();
+
+      showToast(`Đã khôi phục thành công ${newCount} quán từ file!`, "success");
+    } catch {
+      showToast("File sao lưu không hợp lệ hoặc bị lỗi định dạng", "error");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function escapeHtml(value) {
@@ -573,6 +740,28 @@ function renderSaved() {
         <button class="text-button" data-action="open-add-place">+ Thêm địa điểm</button>
       </div>
       ${filtered.length ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">♨</div><h3>Danh sách đang trống</h3><p>Hãy lưu địa điểm từ màn hình Khám phá hoặc bấm nút Thêm quán mới.</p><button class="primary-button" data-action="open-add-place" style="margin-top:14px">${icon("add")} Thêm quán ngay</button></div>`}
+    </section>
+
+    <section class="panel" style="margin-top:16px;background:rgba(255,255,255,0.48);border:1px dashed var(--line);padding:15px 18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 style="font-size:14px;margin:0 0 3px;display:flex;align-items:center;gap:6px;">
+            <span>💾</span> Quản lý dữ liệu lưu trên máy
+          </h3>
+          <p style="font-size:12px;color:var(--ink-muted);margin:0;">
+            Đã lưu ${customPlaces.length} quán tự tạo · Bộ nhớ máy được bảo vệ chống xóa ngầm
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="secondary-button" data-action="export-backup" style="font-size:12px;padding:7px 13px;">
+            ${icon("share")} Sao lưu ra File (.json)
+          </button>
+          <label class="secondary-button" style="font-size:12px;padding:7px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:0;">
+            ${icon("add")} Phục hồi từ File
+            <input id="import-backup-input" type="file" accept=".json,application/json" hidden />
+          </label>
+        </div>
+      </div>
     </section>`;
 }
 
@@ -1519,6 +1708,10 @@ function bindAppEvents() {
     input?.focus();
     input?.setSelectionRange(state.query.length, state.query.length);
   });
+  app.querySelector("#import-backup-input")?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) importBackupFile(file);
+  });
   app.addEventListener("click", handleAction);
 }
 
@@ -1556,6 +1749,7 @@ function handleAction(event) {
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
     case "open-add-place": state.modal = { type: "add-place" }; renderModal(); break;
     case "submit-new-place": submitNewPlace(); break;
+    case "export-backup": exportBackupData(); break;
     case "pick-food-category": {
       const catInput = document.querySelector("#new-place-category");
       const badge = document.querySelector("#selected-category-badge");
