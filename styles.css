@@ -86,7 +86,60 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .search-input { width: 100%; border: 1px solid var(--line); border-radius: 99px; padding: 13px 18px 13px 44px; color: var(--ink); background: rgba(255,255,255,.65); transition: box-shadow .2s, background .2s; }
 .search-input::placeholder { color: #aaa096; }
 .search-input:focus { background: white; box-shadow: 0 0 0 4px rgba(229,93,66,.08); border-color: #e7b4a7; outline: none; }
-.top-actions { display: flex; align-items: center; gap: 12px; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.google-login-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 99px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(60,64,67,.08);
+  transition: all .16s ease;
+  white-space: nowrap;
+}
+.google-login-btn:hover {
+  background: #f8f9fa;
+  border-color: #c6c9ce;
+  box-shadow: 0 2px 6px rgba(60,64,67,.16);
+  transform: translateY(-1px);
+}
+.user-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.75);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 4px 12px 4px 4px;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.user-profile-badge:hover {
+  background: white;
+  border-color: var(--coral);
+  transform: translateY(-1px);
+}
+.user-profile-badge img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.user-profile-badge .user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .install-button { border: 0; border-radius: 99px; padding: 9px 13px; color: white; background: var(--coral); font-size: 12px; font-weight: 700; }
 .install-button:hover { background: var(--coral-dark); }
 .icon-button { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink-muted); background: rgba(255,255,255,.58); position: relative; }
