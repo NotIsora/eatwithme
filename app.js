@@ -659,7 +659,9 @@ function renderSidebar() {
     ["inbox", "inbox", "Hộp thư"],
   ];
   const profileName = state.user?.name || "Khách khám phá";
-  const userCaption = state.user?.email || "Chưa kết nối Google";
+  const userCaption = state.user?.email
+    ? `<span style="color:var(--herb);font-weight:600;display:inline-flex;align-items:center;gap:4px;"><span style="font-size:7px;">●</span> ${escapeHtml(state.user.email)}</span>`
+    : `<span style="color:var(--ink-muted);">Chưa kết nối Google</span>`;
   return `
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
@@ -672,7 +674,7 @@ function renderSidebar() {
           ${avatar(state.user || { name: profileName, color: "green" })}
           <div class="profile-copy">
             <div class="profile-name">${escapeHtml(profileName)}</div>
-            <div class="profile-caption">${escapeHtml(userCaption)}</div>
+            <div class="profile-caption">${userCaption}</div>
           </div>
         </div>
       </div>
