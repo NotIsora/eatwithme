@@ -821,7 +821,31 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
 
 async function fetchIpLocation() {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 1200);
+  const timer = window.setTimeout(() => controller.abort(), 2500);
+
+  // Primary: FreeIPAPI (accurate city-level coordinates in Vietnam)
+  try {
+    const res = await fetch("https://freeipapi.com/api/json", {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+        window.clearTimeout(timer);
+        return {
+          lat: data.latitude,
+          lng: data.longitude,
+          city: data.cityName || data.regionName || "Hà Nội",
+          source: "ip-freeipapi",
+        };
+      }
+    }
+  } catch {
+    /* try next */
+  }
+
+  // Secondary: ipwho.is
   try {
     const response = await fetch("https://ipwho.is/", {
       signal: controller.signal,
@@ -830,38 +854,50 @@ async function fetchIpLocation() {
     if (response.ok) {
       const data = await response.json();
       if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+        window.clearTimeout(timer);
         return {
           lat: data.latitude,
           lng: data.longitude,
-          city: data.city || "Gần bạn",
-          source: "ip",
+          city: data.city || "Khu vực mạng",
+          source: "ip-whois",
         };
       }
     }
   } catch {
-    try {
-      const localRes = await fetch("/api/v1/geoip", {
-        signal: controller.signal,
-        headers: { Accept: "application/json" },
-      });
-      if (localRes.ok) {
-        const localData = await localRes.json();
-        if (Number.isFinite(localData.lat) && Number.isFinite(localData.lng)) {
-          return {
-            lat: localData.lat,
-            lng: localData.lng,
-            city: localData.city || "Hà Nội",
-            source: "ip-local",
-          };
-        }
+    /* try next */
+  }
+
+  // Tertiary: local API
+  try {
+    const localRes = await fetch("/api/v1/geoip", {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    if (localRes.ok) {
+      const localData = await localRes.json();
+      if (Number.isFinite(localData.lat) && Number.isFinite(localData.lng)) {
+        window.clearTimeout(timer);
+        return {
+          lat: localData.lat,
+          lng: localData.lng,
+          city: localData.city || "Hà Nội",
+          source: "ip-local",
+        };
       }
-    } catch {
-      /* ignore */
     }
+  } catch {
+    /* ignore */
   } finally {
     window.clearTimeout(timer);
   }
-  return null;
+
+  // Default fallback: Hanoi culinary hub
+  return {
+    lat: 21.0285,
+    lng: 105.8542,
+    city: "Hà Nội",
+    source: "default",
+  };
 }
 
 function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
@@ -1087,22 +1123,19 @@ async function locateDevice({ silent = false } = {}) {
       if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
     } else {
       const err = streamResult?.error;
+      const ip = await fetchIpLocation();
+      const pt = [ip.lat, ip.lng];
+      mapState.userPosition = pt;
+      renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
+      mapState.instance.setView(pt, 13, { animate: true });
+
       if (err?.code === 1) {
-        const msg = "Vui lòng nhấn biểu tượng 🔒 trên thanh địa chỉ để cấp quyền vị trí";
-        updateMapCaption("Chưa cấp quyền vị trí cho trình duyệt");
+        const msg = "Nhấn biểu tượng 🔒 trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
+        updateMapCaption(`Chưa cấp quyền GPS · đang hiển thị khu vực ${escapeHtml(ip.city)}`);
         if (!silent) showToast(msg, "error");
       } else {
-        const ip = await fetchIpLocation();
-        if (ip) {
-          const pt = [ip.lat, ip.lng];
-          renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
-          mapState.instance.setView(pt, 13, { animate: true });
-          updateMapCaption(`Vị trí khu vực (${escapeHtml(ip.city)})`);
-          if (!silent) showToast(`Hiển thị khu vực ${ip.city}`, "success");
-        } else {
-          updateMapCaption("Không thể lấy vị trí · đang hiển thị khu vực mặc định");
-          if (!silent) showToast("Không thể xác định vị trí", "error");
-        }
+        updateMapCaption(`Vị trí khu vực ${escapeHtml(ip.city)} · bản đồ đã sẵn sàng`);
+        if (!silent) showToast(`Đã định vị khu vực ${ip.city}`, "success");
       }
     }
   } finally {
