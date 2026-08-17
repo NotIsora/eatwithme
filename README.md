@@ -1,102 +1,96 @@
-# EatWithMe MVP
+# ♨ EatWithMe — Food Map & Social Eating App
 
-Một prototype mobile-first cho việc tìm, lưu và chia sẻ những quán ăn đáng nhớ. Repo có dữ liệu mock để khám phá UX ngay cả khi chưa cấu hình Google Maps API, đồng thời có backend state tối giản để browser/PWA và app Capacitor dùng cùng một API.
+Một ứng dụng web/PWA mobile-first hiện đại giúp bạn cùng nhóm bạn bè tìm kiếm, lưu trữ, ghim bản đồ và chia sẻ những quán ăn đáng nhớ với hệ thống **Tag cá nhân (@handle) phong cách Instagram**.
 
-## Chạy local
+Ứng dụng được thiết kế theo kiến trúc **Local-First & Serverless**, bảo đảm hoạt động mượt mà cả khi offline và sẵn sàng triển khai trên **Vercel** hoặc **GitHub Pages** với chi phí 0đ.
+
+---
+
+## 🚀 Trải nghiệm trực tiếp
+
+* **GitHub Pages**: [https://notisora.github.io/eatwithme/](https://notisora.github.io/eatwithme/)
+* **Vercel Ready**: Nhập repo vào [Vercel](https://vercel.com/new) để kích hoạt ngay với Serverless APIs.
+
+---
+
+## 🌟 Các tính năng nổi bật
+
+### 1. Hệ thống Tag Cá Nhân (@tag) phong cách Instagram
+* **Mỗi người dùng có một `@tag` độc nhất**: Không có 2 tài khoản trùng tag trên hệ thống (Case-insensitive: `@eatwithme`, `@andoan`...).
+* **Kiểm tra tính khả dụng thời gian thực (Live Validation)**: Báo ngay khi tag bị trùng hoặc không hợp lệ lúc gõ phím.
+* **Tên & Tag mặc định**: Khi chưa điền, hệ thống tự động đặt tên **`Eat with me`** và tag **`@eatwithme`**.
+* **Tìm kiếm & Kết bạn thực tế từ máy chủ**: Nhập `@tag` để tra cứu tài khoản thực từ Server API (`/api/v1/users/search`) và kết nối 1-chạm.
+* **Sao chép @tag 1-chạm**: Dễ dàng copy tag cá nhân để chia sẻ qua Zalo, Messenger, Instagram.
+
+### 2. Bản đồ & Tự thêm quán ăn
+* **Bản đồ tương tác dịu mắt**: Tích hợp Leaflet + CartoDB Positron tông màu nhẹ nhàng, giới hạn mức zoom tối ưu (10 – 18), chỉ hiển thị tên đường và các quán ghim.
+* **16 danh mục món ăn trực quan**: Món Việt, Phở, Bún/Mì, Cơm, Lẩu, Nướng, Đồ Hàn, Đồ Nhật, Đồ Âu, Hải sản, Cafe, Trà sữa/Ăn vặt, Chay, Ăn sáng, Đêm/Nhậu, Fastfood.
+* **6 phân khúc giá rõ ràng**: `<50k`, `50k-100k`, `100k-200k`, `200k-500k`, `>500k`, `Buffet`.
+* **Thêm quán ăn bằng tay**: Nhập tên, chọn dạng món, mức giá, ghi chú và ghim trực tiếp lên tọa độ hiện tại.
+
+### 3. Lưu trữ Cục bộ (Local-First) & Sao lưu 1-Click
+* **Bảo vệ dữ liệu bền vững**: Kết hợp `LocalStorage` và `IndexedDB` với cơ chế `navigator.storage.persist()` chống trình duyệt tự động dọn dẹp khi đầy bộ nhớ.
+* **Sao lưu & Phục hồi JSON**: Xuất toàn bộ danh sách quán ăn, ghi chú và hồ sơ ra file `.json` hoặc khôi phục lại bất cứ lúc nào.
+
+### 4. Hỗ trợ PWA & Mobile Native (Capacitor)
+* Cài đặt trực tiếp lên màn hình chính điện thoại (iOS Safari & Android Chrome) như ứng dụng native.
+* Tự động nhận diện và ưu tiên `@capacitor/geolocation` khi đóng gói thành ứng dụng di động.
+
+---
+
+## 🛠 Hướng dẫn chạy và Triển khai
+
+### 1. Chạy trên máy cá nhân (Local Development)
 
 ```bash
+# Khởi động máy chủ Node.js cục bộ
 npm run dev
 ```
 
-Mở [http://localhost:4173](http://localhost:4173).
+Mở trình duyệt tại [http://localhost:4173](http://localhost:4173). Không cần cài đặt thư viện ngoài, server dùng Node.js built-in `http`.
 
-Không cần cài dependency: server dùng Node.js built-in `http` và frontend là HTML/CSS/JavaScript thuần.
+---
 
-## Cài trên điện thoại
+### 2. Triển khai lên Vercel (Khuyên dùng)
 
-Đây là PWA có `manifest.webmanifest`, service worker và mobile bottom navigation.
+Dự án đã tích hợp sẵn file cấu hình [`vercel.json`](vercel.json) và Serverless Functions tại [`api/index.js`](api/index.js):
 
-- Android/Chrome: mở URL → chọn “Install app”/“Add to Home screen”.
-- iPhone/Safari: mở URL → Share → “Add to Home Screen”.
-- Để xem từ thiết bị khác trong cùng Wi-Fi, lấy IPv4 bằng `ipconfig` rồi mở `http://<IP-máy-tính>:4173`. Service worker/install PWA trên điện thoại cần HTTPS, vì vậy môi trường production nên deploy lên Vercel/Cloudflare Pages hoặc domain HTTPS.
+1. Truy cập **[https://vercel.com/new](https://vercel.com/new)**.
+2. Chọn Import repository **`NotIsora/eatwithme`**.
+3. Bấm **`Deploy`** (giữ nguyên cấu hình mặc định).
 
-Nếu cần phát hành App Store/Google Play, có thể dùng Capacitor để đóng gói chính frontend này thành native shell; API/database không phải viết lại.
+---
 
-### Native location với Capacitor
-
-`app.js` tự ưu tiên `@capacitor/geolocation` khi chạy trong Android/iOS shell. Khi mở bằng trình duyệt, app vẫn dùng Geolocation API và cache-first như trước.
+### 3. Đóng gói App Di Động với Capacitor
 
 ```bash
 npm install
 npm run build:mobile
-npx cap add android
+npx cap add android   # hoặc: npx cap add ios
 npm run cap:sync
-npx cap open android
+npx cap open android  # hoặc: npx cap open ios
 ```
 
-Android cần Android Studio/SDK. iOS cần macOS/Xcode và thêm `NSLocationWhenInUseUsageDescription` vào `Info.plist`. Chỉ chạy `npx cap add android` hoặc `npx cap add ios` một lần cho mỗi nền tảng; các lần sau dùng `npm run cap:sync`.
+---
 
-## Những gì đã có trong MVP
+## 📡 Hệ thống Server API Endpoints
 
-- Khám phá với search input, kết quả gần bạn và bản đồ tương tác tối giản.
-- Bản đồ Leaflet/Esri World Light Gray, chỉ nhấn mạnh đường và tên đường; marker cho các quán đã lưu và định vị thiết bị bằng Geolocation API.
-- Place detail với địa chỉ, rating, trạng thái mở cửa và giờ đóng cửa.
-- Lưu/bỏ lưu quán, ghi chú và collections qua backend state; `localStorage` là cache/offline fallback.
-- Bộ sưu tập, filter “đang mở”, tạo collection mới.
-- Ghi chú riêng và flow thêm ảnh (hiện chỉ mô phỏng upload).
-- Bạn bè, activity feed, lời mời và hộp thư.
-- Chia sẻ một quán cho nhiều bạn bè.
-- Responsive mobile layout, keyboard focus và reduced-motion support.
+Khi chạy qua `server.mjs` hoặc Vercel Serverless Functions (`api/index.js`):
 
-### Backend dùng chung cho browser và mobile
+| Phương thức | Endpoint | Mô tả |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Kiểm tra trạng thái hoạt động của máy chủ |
+| `GET` | `/api/v1/geoip` | Xác định vị trí địa lý xấp xỉ của người dùng |
+| `GET` | `/api/v1/tags/check?tag=@...` | Kiểm tra xem `@tag` đã có người đăng ký chưa |
+| `PUT` | `/api/v1/tags/claim` | Đăng ký độc quyền `@tag` cho người dùng |
+| `GET` | `/api/v1/users/search?tag=@...` | Tra cứu thông tin người dùng thực tế theo `@tag` |
+| `POST` | `/api/v1/users/profile` | Đăng ký / đồng bộ hồ sơ người dùng lên máy chủ |
+| `GET` | `/api/v1/users` | Lấy danh sách tài khoản đã đăng ký trên hệ thống |
+| `GET` | `/api/v1/state` | Lấy dữ liệu quán ăn đã lưu & ghi chú của người dùng |
+| `PUT` | `/api/v1/state` | Đồng bộ dữ liệu quán ăn & ghi chú lên máy chủ |
 
-Khi chạy `npm run dev`, Node server phục vụ cả giao diện và các endpoint:
+---
 
-```text
-GET /api/health
-GET /api/v1/state
-PUT /api/v1/state
-```
+## 📄 Bản quyền & Đóng góp
 
-Saved places, ghi chú và collections được lưu bền vững trong `db/runtime-state.json` (file này đã được `.gitignore`). Mỗi browser/thiết bị có một `X-EatWithMe-User` riêng (hoặc ID tài khoản Google khi đã đăng nhập) để dữ liệu không bị trộn. Frontend dùng API trước và tự động rơi về `localStorage` khi offline hoặc API chưa được deploy.
-
-### Đăng nhập Google (Google Identity Services)
-
-Ứng dụng tích hợp sẵn bộ SDK **Google Identity Services (GIS)** của Google:
-
-- Khi chưa đăng nhập: Ứng dụng hoạt động ở chế độ khách (Guest) và lưu trữ cục bộ.
-- Khi đăng nhập Google: Hệ thống tự động lấy ảnh đại diện, tên, email và đồng bộ toàn bộ quán ăn đã lưu & ghi chú vào tài khoản Google trên server.
-- Để sử dụng Client ID riêng từ [Google Cloud Console](https://console.cloud.google.com/):
-  1. Tạo OAuth 2.0 Client ID (loại Web application).
-  2. Thêm Authorized JavaScript origins: `http://localhost:4173` (hoặc domain production của bạn).
-  3. Mở mục **Hồ sơ cá nhân** trong ứng dụng → mở rộng phần **Cấu hình Google OAuth Client ID** → Dán Client ID và nhấn **Lưu Client ID**.
-- Ngoài ra, có sẵn nút **Đăng nhập thử nghiệm (Demo)** để kiểm tra nhanh luồng đăng nhập và đồng bộ mà không cần cấu hình trước.
-
-Để app Capacitor gọi cùng backend, đặt URL API có thể truy cập được trước khi build (HTTPS khi chạy production):
-
-```js
-window.EATWITHME_API_BASE = "https://api.example.com/api";
-```
-
-Nếu không thể sửa file build, có thể đặt cùng giá trị một lần trong DevTools của app: `localStorage.setItem("eatwithme.api-base.v1", "https://api.example.com/api")` rồi tải lại.
-
-Browser chạy từ `http://localhost:4173` tự dùng `http://localhost:4173/api`, nên không cần cấu hình thêm.
-
-### Lưu ý về vị trí và bản đồ
-
-- Bản đồ hiển thị ngay theo các quán đã lưu; định vị đọc cache cục bộ tức thì, prefetch song song với lúc tải Leaflet và có deadline cứng khoảng 2,7 giây. Vị trí gần đây được lưu cục bộ tối đa 30 phút; nút “Định vị tôi” cho phép thử lại.
-- Geolocation cần `localhost` hoặc HTTPS. Khi mở trên điện thoại bằng IP nội bộ dạng `http://192.168...`, bản đồ vẫn có thể xem nhưng trình duyệt có thể chặn vị trí.
-- Nền bản đồ dùng Esri World Light Gray Base/Reference và có attribution; production nên kiểm tra chính sách tile/traffic phù hợp.
-- Có thể làm bản đồ offline bằng PMTiles/MBTiles (đóng gói một vùng địa lý và phục vụ tile local), nhưng file sẽ lớn và phải tự cập nhật dữ liệu/giấy phép. MVP hiện dùng tile online để giữ bundle nhỏ.
-
-## Nối backend thật
-
-Prototype này cố ý tách phần UI khỏi Google API. Khi đưa vào production:
-
-1. Thay data mock trong `app.js` bằng các endpoint REST trong tài liệu kiến trúc.
-2. Gọi Google Places API (New) qua backend, không đưa server key vào browser.
-3. Dùng PostgreSQL + PostGIS cho `places`, `saved_places`, `friendships`, `collections` và `shares`.
-4. Dùng object storage cho ảnh, signed upload URL, resize WebP/AVIF và quét MIME.
-5. Thêm Redis cache, request coalescing, rate limit và worker đồng bộ `currentOpeningHours` theo TTL.
-
-Tài liệu schema và API nằm ở [`docs/architecture.md`](docs/architecture.md).
+Dự án được xây dựng với mục tiêu mang lại trải nghiệm khám phá ẩm thực tối giản, mượt mà và kết nối bạn bè tiện lợi nhất. Mọi đóng góp và phản hồi luôn được hoan nghênh!
