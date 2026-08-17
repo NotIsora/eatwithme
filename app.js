@@ -15,7 +15,7 @@ const ICONS = {
   check: "✓",
 };
 
-const places = [
+const defaultPlaces = [
   {
     id: "bun-cha-huong-lien",
     lat: 21.0209,
@@ -98,6 +98,15 @@ const places = [
   },
 ];
 
+const customPlacesKey = "eatwithme.custom_places.v1";
+let customPlaces = readStorage(customPlacesKey, []);
+let places = [...customPlaces, ...defaultPlaces];
+
+function refreshPlaces() {
+  customPlaces = readStorage(customPlacesKey, []);
+  places = [...customPlaces, ...defaultPlaces];
+}
+
 const friends = [
   { id: "mai", name: "Mai Anh", initials: "MA", caption: "đã lưu 18 quán", color: "green" },
   { id: "quan", name: "Quân Lê", initials: "QL", caption: "đã lưu 9 quán", color: "" },
@@ -106,15 +115,14 @@ const friends = [
 ];
 
 const activities = [
-  { friend: friends[0], place: places[1], time: "12 phút trước", text: "đã lưu" },
-  { friend: friends[1], place: places[2], time: "1 giờ trước", text: "đã chia sẻ" },
-  { friend: friends[2], place: places[0], time: "hôm qua", text: "đã lưu" },
+  { friend: friends[0], place: defaultPlaces[1], time: "12 phút trước", text: "đã lưu" },
+  { friend: friends[1], place: defaultPlaces[2], time: "1 giờ trước", text: "đã chia sẻ" },
+  { friend: friends[2], place: defaultPlaces[0], time: "hôm qua", text: "đã lưu" },
 ];
 
-const initialSaved = [places[0].id, places[2].id];
+const initialSaved = [defaultPlaces[0].id, defaultPlaces[1].id];
 const storageKey = "eatwithme.saved.v1";
 const notesKey = "eatwithme.notes.v1";
-const collectionsKey = "eatwithme.collections.v1";
 const locationStorageKey = "eatwithme.location.v1";
 const backendUserKey = "eatwithme.backend-user.v1";
 
@@ -132,17 +140,11 @@ const state = {
   saved: readStorage(storageKey, initialSaved),
   notes: readStorage(notesKey, {}),
   photoPreviews: {},
-  selectedCollection: "all",
   savedFilter: "all",
   modal: null,
   toastTimer: null,
   selectedShareFriends: new Set(),
   installAvailable: false,
-  collections: readStorage(collectionsKey, [
-    { id: "all", name: "Tất cả địa điểm", count: 2 },
-    { id: "want", name: "Muốn thử", count: 1 },
-    { id: "visited", name: "Đã ăn rồi", count: 1 },
-    ]),
 };
 
 function resolveBackendBaseUrl() {
@@ -170,7 +172,7 @@ function backendPayload() {
   return {
     saved: state.saved,
     notes: state.notes,
-    collections: state.collections,
+    customPlaces: readStorage(customPlacesKey, []),
   };
 }
 
@@ -199,7 +201,6 @@ async function backendRequest(path, options = {}) {
 function saveLocalState() {
   saveStorage(storageKey, state.saved);
   saveStorage(notesKey, state.notes);
-  saveStorage(collectionsKey, state.collections);
 }
 
 async function syncBackendState() {
@@ -234,7 +235,10 @@ async function bootstrapBackend() {
     if (response?.exists && remote) {
       state.saved = Array.isArray(remote.saved) ? remote.saved : state.saved;
       state.notes = remote.notes && typeof remote.notes === "object" ? remote.notes : state.notes;
-      state.collections = Array.isArray(remote.collections) && remote.collections.length ? remote.collections : state.collections;
+      if (Array.isArray(remote.customPlaces)) {
+        saveStorage(customPlacesKey, remote.customPlaces);
+        refreshPlaces();
+      }
       saveLocalState();
     } else {
       backend.available = true;
@@ -393,7 +397,7 @@ function renderTopbar() {
 function renderSidebar() {
   const nav = [
     ["explore", "compass", "Khám phá"],
-    ["saved", "collections", "Bộ sưu tập"],
+    ["saved", "bookmark", "Quán đã lưu"],
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
@@ -411,7 +415,7 @@ function renderSidebar() {
 function renderMobileTabbar() {
   const nav = [
     ["explore", "compass", "Khám phá"],
-    ["saved", "collections", "Đã lưu"],
+    ["saved", "bookmark", "Đã lưu"],
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
@@ -425,7 +429,7 @@ function renderHero() {
         <div class="eyebrow">Hôm nay ăn gì?</div>
         <h1>Đi tìm một nơi<br /><em>đáng nhớ.</em></h1>
         <p>Gom những quán bạn yêu, những món bạn muốn thử và những lời rủ rê không nên bỏ lỡ.</p>
-        <div class="hero-actions"><button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button><button class="secondary-button" data-action="navigate" data-view="saved">Mở bộ sưu tập</button></div>
+        <div class="hero-actions"><button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button><button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu</button></div>
       </div>
       <div class="hero-aside"><div class="eyebrow">Bản đồ bạn bè</div><h3>Mai vừa lưu một chỗ hẹn cuối tuần.</h3><p>Khám phá những nơi đang được nhóm bạn của bạn nhắc đến nhiều nhất.</p><div class="mini-avatars">${friends.slice(0, 3).map((friend) => avatar(friend)).join("")}<span>+ 2 người bạn</span></div></div>
     </section>`;
@@ -449,6 +453,7 @@ function renderMap() {
       <div class="map-toolbar">
         <button class="map-chip active" data-action="fit-saved" aria-label="Xem các quán đã lưu">Đã lưu · ${savedCount}</button>
         <button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button>
+        <button class="map-chip" data-action="open-add-place" style="font-weight:700;color:var(--coral)">${icon("add")} Thêm quán</button>
         <button class="map-chip" data-action="switch-city" data-city="hanoi">Hà Nội</button>
         <button class="map-chip" data-action="switch-city" data-city="hcm">TP. HCM</button>
         <button class="map-chip" data-action="switch-city" data-city="danang">Đà Nẵng</button>
@@ -475,14 +480,38 @@ function renderExplore() {
   return `${renderHero()}${renderSearchPanel()}${renderStats()}<section class="content-grid">${renderMap()}${renderActivity()}</section>`;
 }
 
-function renderCollections() {
-  return `<div class="collection-list">${state.collections.map((collection) => `<button class="collection-item ${state.selectedCollection === collection.id ? "active" : ""}" data-action="select-collection" data-collection-id="${collection.id}"><span class="collection-name">${escapeHtml(collection.name)}</span><span class="collection-count">${collection.id === "all" ? state.saved.length : collection.count} địa điểm</span></button>`).join("")}<button class="collection-add" data-action="new-collection">${icon("add")} Tạo collection</button></div>`;
-}
-
 function renderSaved() {
   const savedPlaces = places.filter((place) => isSaved(place.id));
-  const filtered = state.savedFilter === "open" ? savedPlaces.filter((place) => place.status === "open") : savedPlaces;
-  return `<div class="page-title-row"><div><div class="eyebrow">Kho lưu trữ của An</div><h1>Bộ sưu tập</h1><p>Những nơi bạn muốn quay lại, hoặc chưa kịp ghé lần đầu.</p></div><button class="primary-button" data-action="new-collection">${icon("add")} Tạo collection</button></div><div class="filter-row"><button class="filter ${state.savedFilter === "all" ? "active" : ""}" data-action="saved-filter" data-filter="all">Tất cả</button><button class="filter ${state.savedFilter === "open" ? "active" : ""}" data-action="saved-filter" data-filter="open">Đang mở</button><button class="filter" data-action="saved-filter" data-filter="friends">Bạn bè đã lưu</button></div><div class="saved-layout"><section>${renderCollections()}</section><section class="panel"><div class="panel-header"><div><h2>${state.selectedCollection === "all" ? "Tất cả địa điểm" : "Những nơi nên ghé"}</h2><p>${filtered.length} quán trong bộ sưu tập</p></div><button class="text-button" data-action="focus-search">+ Thêm địa điểm</button></div>${filtered.length ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">♡</div><h3>Bộ sưu tập đang trống</h3><p>Hãy lưu một địa điểm từ màn hình Khám phá.</p></div>`}</section></div>`;
+  let filtered = savedPlaces;
+  if (state.savedFilter === "open") {
+    filtered = savedPlaces.filter((place) => place.status === "open");
+  } else if (state.savedFilter === "custom") {
+    filtered = savedPlaces.filter((place) => place.isCustom);
+  }
+  return `
+    <div class="page-title-row">
+      <div>
+        <div class="eyebrow">Kho lưu trữ của An</div>
+        <h1>Quán đã lưu</h1>
+        <p>Những quán bạn muốn quay lại, lưu trữ riêng hoặc tự thêm bằng tay.</p>
+      </div>
+      <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
+    </div>
+    <div class="filter-row">
+      <button class="filter ${state.savedFilter === "all" ? "active" : ""}" data-action="saved-filter" data-filter="all">Tất cả (${savedPlaces.length})</button>
+      <button class="filter ${state.savedFilter === "open" ? "active" : ""}" data-action="saved-filter" data-filter="open">Đang mở</button>
+      <button class="filter ${state.savedFilter === "custom" ? "active" : ""}" data-action="saved-filter" data-filter="custom">Tự tạo</button>
+    </div>
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Danh sách quán ăn</h2>
+          <p>${filtered.length} địa điểm đã lưu</p>
+        </div>
+        <button class="text-button" data-action="open-add-place">+ Thêm địa điểm</button>
+      </div>
+      ${filtered.length ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">♨</div><h3>Danh sách đang trống</h3><p>Hãy lưu địa điểm từ màn hình Khám phá hoặc bấm nút Thêm quán mới.</p><button class="primary-button" data-action="open-add-place" style="margin-top:14px">${icon("add")} Thêm quán ngay</button></div>`}
+    </section>`;
 }
 
 function renderFriends() {
@@ -1180,6 +1209,7 @@ function renderModal() {
   if (state.modal.type === "place") root.innerHTML = renderPlaceModal(state.modal.placeId);
   if (state.modal.type === "share") root.innerHTML = renderShareModal(state.modal.placeId);
   if (state.modal.type === "note") root.innerHTML = renderNoteModal(state.modal.placeId);
+  if (state.modal.type === "add-place") root.innerHTML = renderAddPlaceModal();
   bindModalEvents();
 }
 
@@ -1198,6 +1228,178 @@ function renderNoteModal(placeId) {
 function renderShareModal(placeId) {
   const place = getPlace(placeId);
   return `<div class="modal-backdrop" data-action="close-modal"><article class="modal" role="dialog" aria-modal="true" aria-label="Chia sẻ ${escapeHtml(place.name)}" data-modal-card><div class="modal-content"><div class="eyebrow">Gửi một lời rủ rê</div><h2>Chia sẻ ${escapeHtml(place.name)}</h2><p class="muted">Chọn người bạn muốn rủ đi cùng.</p><div class="share-list">${friends.map((friend) => `<button class="share-person ${state.selectedShareFriends.has(friend.id) ? "selected" : ""}" data-action="toggle-share-friend" data-friend-id="${friend.id}">${avatar(friend)}<span>${escapeHtml(friend.name)}</span><span class="check">${icon("check")}</span></button>`).join("")}</div><div class="modal-footer"><button class="secondary-button" data-action="close-modal">Hủy</button><button class="primary-button" data-action="confirm-share" data-place-id="${place.id}">Gửi lời rủ rê ${icon("share")}</button></div></div></article></div>`;
+}
+
+function renderAddPlaceModal() {
+  const currentCoords = mapState.userPosition || DEFAULT_MAP_CENTER;
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Thêm quán ăn mới" data-modal-card style="max-width:440px;">
+        <div class="modal-content">
+          <div class="eyebrow">Thêm địa điểm vào kho ẩm thực</div>
+          <h2>Thêm quán ăn mới</h2>
+          <p class="muted">Lưu lại địa điểm yêu thích và tự động ghim lên bản đồ của bạn.</p>
+
+          <form id="add-place-form" onsubmit="event.preventDefault();" style="display:grid;gap:12px;margin-top:14px;">
+            <div class="form-group">
+              <label for="new-place-name">Tên quán ăn / Địa điểm <span style="color:var(--coral)">*</span></label>
+              <input id="new-place-name" class="form-input" type="text" placeholder="Ví dụ: Phở Bò Bát Đàn, Cà phê Trứng Giảng..." required autofocus />
+            </div>
+
+            <div class="form-group">
+              <label for="new-place-category">Thể loại / Món đặc trưng</label>
+              <input id="new-place-category" class="form-input" type="text" placeholder="Ví dụ: Cà phê, Phở, Cơm tấm, Lẩu..." />
+              <div class="category-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                <button type="button" class="tag-chip" data-action="pick-category" data-val="Cà phê · Trà">Cà phê</button>
+                <button type="button" class="tag-chip" data-action="pick-category" data-val="Phở · Bún · Mì">Phở / Bún</button>
+                <button type="button" class="tag-chip" data-action="pick-category" data-val="Cơm tấm · Cơm niêu">Cơm tấm</button>
+                <button type="button" class="tag-chip" data-action="pick-category" data-val="Lẩu & Nướng">Lẩu / Nướng</button>
+                <button type="button" class="tag-chip" data-action="pick-category" data-val="Ăn vặt · Tráng miệng">Ăn vặt</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-place-address">Địa chỉ / Khu vực</label>
+              <input id="new-place-address" class="form-input" type="text" placeholder="Ví dụ: 49 Bát Đàn, Hoàn Kiếm, Hà Nội" />
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group">
+                <label for="new-place-price">Mức giá</label>
+                <input id="new-place-price" class="form-input" type="text" placeholder="Ví dụ: 40k – 70k" />
+              </div>
+              <div class="form-group">
+                <label for="new-place-hours">Giờ mở cửa</label>
+                <input id="new-place-hours" class="form-input" type="text" placeholder="Ví dụ: 07:00 – 22:00" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-place-notes">Ghi chú riêng / Món ngon nên thử</label>
+              <textarea id="new-place-notes" class="form-input" rows="2" placeholder="Ví dụ: Phở tái lăn rất ngon, quẩy giòn, nên ghé sớm..."></textarea>
+            </div>
+
+            <div class="form-group" style="padding:10px;background:var(--paper-soft);border-radius:12px;border:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:12px;font-weight:700;color:var(--ink);">Tọa độ ghim trên bản đồ</span>
+                <button type="button" class="text-button" data-action="use-my-location" style="font-size:11px;">
+                  ${icon("compass")} Vị trí hiện tại
+                </button>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <input id="new-place-lat" class="form-input" type="number" step="0.0001" value="${currentCoords[0]}" placeholder="Vĩ độ (Lat)" />
+                <input id="new-place-lng" class="form-input" type="number" step="0.0001" value="${currentCoords[1]}" placeholder="Kinh độ (Lng)" />
+              </div>
+            </div>
+
+            <div class="modal-footer" style="margin-top:10px;">
+              <button type="button" class="secondary-button" data-action="close-modal">Hủy</button>
+              <button type="button" class="primary-button" data-action="submit-new-place">
+                ${icon("check")} Lưu quán ăn
+              </button>
+            </div>
+          </form>
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+function submitNewPlace() {
+  const nameInput = document.querySelector("#new-place-name");
+  const categoryInput = document.querySelector("#new-place-category");
+  const addressInput = document.querySelector("#new-place-address");
+  const priceInput = document.querySelector("#new-place-price");
+  const hoursInput = document.querySelector("#new-place-hours");
+  const notesInput = document.querySelector("#new-place-notes");
+  const latInput = document.querySelector("#new-place-lat");
+  const lngInput = document.querySelector("#new-place-lng");
+
+  const name = nameInput?.value.trim();
+  if (!name) {
+    showToast("Vui lòng nhập tên quán ăn", "error");
+    nameInput?.focus();
+    return;
+  }
+
+  const category = categoryInput?.value.trim() || "Quán ăn ngon";
+  const address = addressInput?.value.trim() || "Chưa cập nhật địa chỉ";
+  const price = priceInput?.value.trim() || "Bình dân";
+  const hours = hoursInput?.value.trim() || "08:00 – 22:00";
+  const note = notesInput?.value.trim() || "";
+
+  let lat = parseFloat(latInput?.value);
+  let lng = parseFloat(lngInput?.value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    const fallback = mapState.userPosition || DEFAULT_MAP_CENTER;
+    lat = fallback[0];
+    lng = fallback[1];
+  }
+
+  const lowerCat = category.toLowerCase();
+  let color = "bun";
+  if (lowerCat.includes("cafe") || lowerCat.includes("cà phê") || lowerCat.includes("trà")) color = "cafe";
+  else if (lowerCat.includes("pizza") || lowerCat.includes("bánh") || lowerCat.includes("tây")) color = "taco";
+  else if (lowerCat.includes("bún") || lowerCat.includes("mì") || lowerCat.includes("phở")) color = "bun";
+  else if (lowerCat.includes("cơm") || lowerCat.includes("nướng") || lowerCat.includes("lẩu")) color = "taco";
+
+  const newPlace = {
+    id: `custom-${Date.now()}`,
+    name,
+    category,
+    address,
+    distance: "Vừa thêm",
+    status: "open",
+    closes: hours.includes("–") ? hours.split("–")[1].trim() : "22:00",
+    rating: "5.0",
+    color,
+    pin: "coral",
+    lat,
+    lng,
+    description: note || `Quán ${name} do bạn tự thêm vào danh sách ẩm thực.`,
+    hours,
+    price,
+    isCustom: true,
+  };
+
+  // Add to custom places
+  const existingCustom = readStorage(customPlacesKey, []);
+  existingCustom.unshift(newPlace);
+  saveStorage(customPlacesKey, existingCustom);
+
+  // Refresh places array
+  places = [newPlace, ...places.filter((p) => p.id !== newPlace.id)];
+
+  // Automatically save
+  if (!state.saved.includes(newPlace.id)) {
+    state.saved.unshift(newPlace.id);
+  }
+
+  // Save note if provided
+  if (note) {
+    state.notes[newPlace.id] = note;
+  }
+
+  saveLocalState();
+  scheduleBackendSync();
+
+  // Close modal
+  state.modal = null;
+  renderModal();
+
+  // If on map, add marker and fly to it
+  if (mapState.instance && window.L) {
+    const iconForSaved = savedMarkerIcon(window.L);
+    const marker = window.L.marker([newPlace.lat, newPlace.lng], { icon: iconForSaved })
+      .addTo(mapState.instance)
+      .bindPopup(mapPopupHtml(newPlace), { maxWidth: 230 });
+    mapState.savedMarkers.set(newPlace.id, marker);
+    mapState.instance.setView([newPlace.lat, newPlace.lng], MAP_LOCATE_ZOOM, { animate: true });
+    marker.openPopup();
+  }
+
+  showToast(`Đã thêm quán “${name}” vào danh sách!`, "success");
+  renderApp();
 }
 
 function bindAppEvents() {
@@ -1245,6 +1447,31 @@ function handleAction(event) {
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
+    case "open-add-place": state.modal = { type: "add-place" }; renderModal(); break;
+    case "submit-new-place": submitNewPlace(); break;
+    case "pick-category": {
+      const catInput = document.querySelector("#new-place-category");
+      if (catInput) catInput.value = target.dataset.val;
+      break;
+    }
+    case "use-my-location": {
+      const latIn = document.querySelector("#new-place-lat");
+      const lngIn = document.querySelector("#new-place-lng");
+      if (mapState.userPosition && latIn && lngIn) {
+        latIn.value = mapState.userPosition[0].toFixed(5);
+        lngIn.value = mapState.userPosition[1].toFixed(5);
+        showToast("Đã lấy tọa độ vị trí hiện tại của bạn", "success");
+      } else {
+        locateDevice().then(() => {
+          if (mapState.userPosition && latIn && lngIn) {
+            latIn.value = mapState.userPosition[0].toFixed(5);
+            lngIn.value = mapState.userPosition[1].toFixed(5);
+            showToast("Đã định vị và cập nhật tọa độ", "success");
+          }
+        });
+      }
+      break;
+    }
     case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
     case "switch-city": {
       const cityKey = target.dataset.city;
@@ -1277,10 +1504,8 @@ function handleAction(event) {
       break;
     case "confirm-share": confirmShare(target.dataset.placeId); break;
     case "saved-filter": state.savedFilter = target.dataset.filter; renderApp(); break;
-    case "select-collection": state.selectedCollection = target.dataset.collectionId; renderApp(); break;
-    case "new-collection": createCollection(); break;
     case "invite-friend": showToast("Đã sao chép link mời bạn bè", "success"); break;
-    case "view-friend": showToast("Đang mở collection của bạn bè", "success"); break;
+    case "view-friend": showToast("Đang mở danh sách quán của bạn bè", "success"); break;
     case "mark-read": showToast("Đã đánh dấu tất cả là đã đọc", "success"); break;
     case "install-app": installApp(); break;
     default: break;
@@ -1320,19 +1545,6 @@ function confirmShare(placeId) {
   state.modal = null;
   showToast(`Đã gửi ${count} lời rủ đến ${place.name}`, "success");
   renderModal();
-}
-
-function createCollection() {
-  const name = window.prompt("Tên collection mới");
-  if (!name?.trim()) return;
-  const id = `collection-${Date.now()}`;
-  state.collections.push({ id, name: name.trim(), count: 0 });
-  saveLocalState();
-  scheduleBackendSync();
-  state.selectedCollection = id;
-  state.view = "saved";
-  showToast(`Đã tạo collection “${name.trim()}”`, "success");
-  renderApp();
 }
 
 async function installApp() {
