@@ -172,8 +172,9 @@ async function handleApi(request, response, pathname) {
     const tag = raw.startsWith("@") ? raw : `@${raw}`;
     const store = await readStore();
     const profiles = store.user_profiles || {};
+    const tags = store.tags || {};
     
-    // Find profile by tag
+    // Find profile by tag in user_profiles
     let matched = null;
     for (const [id, prof] of Object.entries(profiles)) {
       if (prof.tag && prof.tag.toLowerCase() === tag) {
@@ -182,10 +183,23 @@ async function handleApi(request, response, pathname) {
       }
     }
 
+    // Check tags registry if not in user_profiles
+    if (!matched && tags[tag]) {
+      const ownerId = tags[tag];
+      const baseName = tag.replace(/^@/, "").replace(/[._]/g, " ").trim();
+      const capitalized = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+      matched = {
+        id: ownerId,
+        name: capitalized,
+        tag,
+        caption: "tài khoản đã đăng ký trên máy chủ",
+      };
+    }
+
     if (matched) {
       sendJson(response, 200, { ok: true, user: matched });
     } else {
-      sendJson(response, 404, { ok: false, error: `Không tìm thấy người dùng có tag ${tag}` });
+      sendJson(response, 404, { ok: false, error: `Không tìm thấy tài khoản có tag ${tag} trên máy chủ` });
     }
     return true;
   }
