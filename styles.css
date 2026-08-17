@@ -162,8 +162,8 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 .map-chip.active { color: white; background: var(--herb); border-color: var(--herb); }
 .map-locate-chip { display: inline-flex; align-items: center; gap: 5px; }
 .leaflet-map, .map-fallback { position: absolute; inset: 0; z-index: 1; }
-.leaflet-container { color: var(--ink); background: #edf1ed; font: 12px/1.45 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
-.leaflet-tile-pane { filter: grayscale(1) saturate(.08) contrast(.82) brightness(1.12); }
+.leaflet-container { color: var(--ink); background: #fbf8f3; font: 12px/1.45 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
+.leaflet-tile-pane { filter: saturate(1.04) contrast(.98) brightness(1.02); }
 .leaflet-control-zoom { border: 0 !important; box-shadow: 0 4px 14px rgba(48,34,23,.13) !important; }
 .leaflet-control-zoom a { color: var(--ink) !important; border: 0 !important; background: rgba(255,253,249,.92) !important; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--paper); box-shadow: 0 9px 26px rgba(48,34,23,.14); }

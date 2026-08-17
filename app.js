@@ -260,9 +260,9 @@ const CITIES = {
   danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
 };
 const GPS_HARD_DEADLINE_MS = 1500;
-const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const MAP_LABEL_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
-const MAP_TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
+const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const MAP_TILE_SUBDOMAINS = ["a", "b", "c", "d"];
+const MAP_TILE_ATTRIBUTION = "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\" target=\"_blank\">CARTO</a>";
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
   timeout: 600,
@@ -603,12 +603,8 @@ function buildInteractiveMap(L) {
   const tiles = L.tileLayer(MAP_TILE_URL, {
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
+    subdomains: MAP_TILE_SUBDOMAINS,
     attribution: MAP_TILE_ATTRIBUTION,
-  }).addTo(map);
-  L.tileLayer(MAP_LABEL_TILE_URL, {
-    minZoom: MAP_MIN_ZOOM,
-    maxZoom: MAP_MAX_ZOOM,
-    opacity: 0.92,
   }).addTo(map);
   tiles.once("load", () => {
     mapState.tilesLoaded = true;
