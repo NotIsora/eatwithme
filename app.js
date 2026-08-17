@@ -250,10 +250,14 @@ async function bootstrapBackend() {
 }
 
 const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
+const MAP_MIN_ZOOM = 11; // Chặn zoom out quá mức (giữ trong phạm vi vùng đô thị)
+const MAP_MAX_ZOOM = 17; // Chặn zoom in quá mức (giữ chi tiết cấp đường phố cân đối)
+const MAP_DEFAULT_ZOOM = 13; // Góc nhìn thành phố mặc định
+const MAP_LOCATE_ZOOM = 15; // Mức zoom khi định vị người dùng
 const CITIES = {
-  hanoi: { name: "Hà Nội", center: [21.0285, 105.8542], zoom: 13 },
-  hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: 13 },
-  danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: 13 },
+  hanoi: { name: "Hà Nội", center: [21.0285, 105.8542], zoom: MAP_DEFAULT_ZOOM },
+  hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: MAP_DEFAULT_ZOOM },
+  danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
 };
 const GPS_HARD_DEADLINE_MS = 1500;
 const MAP_TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
@@ -587,14 +591,23 @@ function buildInteractiveMap(L) {
   mapState.savedMarkers.clear();
   mapState.tilesLoaded = false;
 
-  const map = L.map(element, { zoomControl: false, preferCanvas: true }).setView(DEFAULT_MAP_CENTER, 13);
+  const map = L.map(element, {
+    zoomControl: false,
+    preferCanvas: true,
+    minZoom: MAP_MIN_ZOOM,
+    maxZoom: MAP_MAX_ZOOM,
+    zoomSnap: 0.5,
+    zoomDelta: 0.5,
+  }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
   const tiles = L.tileLayer(MAP_TILE_URL, {
-    maxZoom: 19,
+    minZoom: MAP_MIN_ZOOM,
+    maxZoom: MAP_MAX_ZOOM,
     attribution: MAP_TILE_ATTRIBUTION,
   }).addTo(map);
   L.tileLayer(MAP_LABEL_TILE_URL, {
-    maxZoom: 19,
+    minZoom: MAP_MIN_ZOOM,
+    maxZoom: MAP_MAX_ZOOM,
     opacity: 0.92,
   }).addTo(map);
   tiles.once("load", () => {
@@ -615,9 +628,9 @@ function buildInteractiveMap(L) {
   if (mapState.userPosition) points.push(mapState.userPosition);
   if (points.length > 1) {
     const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 15 });
   } else if (points.length === 1) {
-    map.setView(points[0], 14);
+    map.setView(points[0], MAP_LOCATE_ZOOM);
   }
 
   mapState.instance = map;
@@ -1117,7 +1130,7 @@ async function locateDevice({ silent = false } = {}) {
       mapState.userPosition = pt;
       mapState.hasLocatedUser = true;
       renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true, accuracy });
-      mapState.instance.setView(pt, Math.min(16, Math.max(14, accuracy <= 30 ? 16 : 14)), { animate: true });
+      mapState.instance.setView(pt, MAP_LOCATE_ZOOM, { animate: true });
       const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
       updateMapCaption(`${label} (độ chuẩn ±${Math.round(accuracy || 10)}m) · bản đồ đã sẵn sàng`);
       if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
@@ -1127,7 +1140,7 @@ async function locateDevice({ silent = false } = {}) {
       const pt = [ip.lat, ip.lng];
       mapState.userPosition = pt;
       renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
-      mapState.instance.setView(pt, 13, { animate: true });
+      mapState.instance.setView(pt, MAP_DEFAULT_ZOOM, { animate: true });
 
       if (err?.code === 1) {
         const msg = "Nhấn biểu tượng 🔒 trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
@@ -1243,7 +1256,7 @@ function handleAction(event) {
       const saved = places.filter((p) => isSaved(p.id));
       if (saved.length && mapState.instance && window.L) {
         const bounds = window.L.latLngBounds(saved.map((p) => [p.lat, p.lng]));
-        mapState.instance.fitBounds(bounds, { padding: [44, 44], maxZoom: 14 });
+        mapState.instance.fitBounds(bounds, { padding: [44, 44], maxZoom: 15 });
         showToast("Đã căn chỉnh theo các quán đã lưu", "success");
       }
       break;
