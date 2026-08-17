@@ -140,12 +140,32 @@ function refreshPlaces() {
   places = [...customPlaces, ...defaultPlaces];
 }
 
-const friends = [
-  { id: "mai", name: "Mai Anh", initials: "MA", caption: "đã lưu 18 quán", color: "green" },
-  { id: "quan", name: "Quân Lê", initials: "QL", caption: "đã lưu 9 quán", color: "" },
-  { id: "linh", name: "Linh Nguyễn", initials: "LN", caption: "đã lưu 24 quán", color: "green" },
-  { id: "minh", name: "Minh Phạm", initials: "MP", caption: "đã lưu 7 quán", color: "" },
+const friendsStorageKey = "eatwithme.friends.v1";
+const defaultFriends = [
+  { id: "mai", tag: "@maianh.foodie", name: "Mai Anh", initials: "MA", caption: "đã lưu 18 quán", color: "green" },
+  { id: "quan", tag: "@quanle.hanoi", name: "Quân Lê", initials: "QL", caption: "đã lưu 9 quán", color: "" },
+  { id: "linh", tag: "@linh.foodlover", name: "Linh Nguyễn", initials: "LN", caption: "đã lưu 24 quán", color: "green" },
+  { id: "minh", tag: "@minhpham.eat", name: "Minh Phạm", initials: "MP", caption: "đã lưu 7 quán", color: "" },
 ];
+
+let friends = readStorage(friendsStorageKey, defaultFriends);
+
+function getUserTag(user) {
+  if (user?.tag) {
+    const raw = String(user.tag).trim();
+    return raw.startsWith("@") ? raw : `@${raw}`;
+  }
+  if (user?.email) {
+    const prefix = user.email.split("@")[0].replace(/[^a-zA-Z0-9._]/g, "").toLowerCase();
+    return `@${prefix}`;
+  }
+  if (user?.name) {
+    const ascii = user.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+    const clean = ascii.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return `@${clean || "user"}`;
+  }
+  return "@andoanthien08";
+}
 
 const activities = [
   { friend: friends[0], place: defaultPlaces[1], time: "12 phút trước", text: "đã lưu" },
@@ -658,10 +678,9 @@ function renderSidebar() {
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
-  const profileName = state.user?.name || "Khách khám phá";
-  const userCaption = state.user?.email
-    ? `<span style="color:var(--herb);font-weight:600;display:inline-flex;align-items:center;gap:4px;"><span style="font-size:7px;">●</span> ${escapeHtml(state.user.email)}</span>`
-    : `<span style="color:var(--ink-muted);">Chưa kết nối Google</span>`;
+  const profileName = state.user?.name || "An Đoàn";
+  const myTag = getUserTag(state.user);
+  const userCaption = `<span class="profile-handle">${escapeHtml(myTag)}</span>`;
   return `
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
@@ -806,7 +825,77 @@ function renderSaved() {
 }
 
 function renderFriends() {
-  return `<div class="page-title-row"><div><div class="eyebrow">Những người cùng khẩu vị</div><h1>Bạn bè</h1><p>Chia sẻ một quán hay cả một buổi hẹn.</p></div><button class="primary-button" data-action="invite-friend">${icon("add")} Thêm bạn</button></div><div class="friends-layout"><section class="panel"><div class="panel-header"><div><h2>Nhóm của bạn</h2><p>4 người bạn đang kết nối</p></div><button class="text-button" data-action="invite-friend">Mời bằng link ${icon("share")}</button></div><div class="friend-list-large">${friends.map((friend) => `<div class="person-row">${avatar(friend)}<div class="person-copy"><strong>${escapeHtml(friend.name)}</strong><span>${escapeHtml(friend.caption)}</span></div><button class="secondary-button" data-action="view-friend" data-friend-id="${friend.id}">Xem quán</button></div>`).join("")}</div></section><aside class="invite-card"><div class="eyebrow" style="color:#ffd5c4">Rủ thêm một người</div><h3>Quán ngon hơn khi có người để tag.</h3><p>Gửi lời mời, chia sẻ một list và hẹn ngày đi ăn.</p><button class="secondary-button" data-action="invite-friend">Sao chép link mời ${icon("share")}</button></aside></div>`;
+  const myTag = getUserTag(state.user);
+  return `
+    <div class="page-title-row">
+      <div>
+        <div class="eyebrow">Kết nối & Tag bạn bè</div>
+        <h1>Bạn bè</h1>
+        <p>Tìm kiếm qua @tag phong cách Instagram để cùng lập danh sách quán ăn.</p>
+      </div>
+      <button class="primary-button" data-action="focus-add-friend">${icon("add")} Kết bạn qua @tag</button>
+    </div>
+
+    <!-- My Tag Banner -->
+    <div class="my-tag-card">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="avatar green" style="width:46px;height:46px;font-size:16px;">
+          ${escapeHtml(initials(state.user?.name || "An Đoàn"))}
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--ink-muted);margin-bottom:2px;">Tag cá nhân của bạn:</div>
+          <div class="my-tag-badge">${escapeHtml(myTag)}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="secondary-button" data-action="copy-my-tag" style="font-size:12px;padding:8px 14px;">
+          ${icon("share")} Sao chép @tag
+        </button>
+        <button class="secondary-button" data-action="open-profile" style="font-size:12px;padding:8px 14px;">
+          Đổi @tag
+        </button>
+      </div>
+    </div>
+
+    <div class="friends-layout">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Danh sách bạn bè</h2>
+            <p>${friends.length} người bạn đang kết nối</p>
+          </div>
+          <button class="text-button" data-action="copy-my-tag">Chia sẻ @tag ${icon("share")}</button>
+        </div>
+
+        <form class="add-friend-bar" onsubmit="event.preventDefault();" style="display:flex;gap:8px;margin-bottom:16px;">
+          <input id="friend-tag-input" class="form-input" type="text" placeholder="Nhập @tag bạn bè (vd: @maianh.foodie, @quanle.hanoi)..." autocomplete="off" />
+          <button type="button" class="primary-button" data-action="add-friend-by-tag" style="white-space:nowrap;padding:10px 16px;">+ Kết bạn</button>
+        </form>
+
+        <div class="friend-list-large">
+          ${friends.map((friend) => `
+            <div class="person-row">
+              ${avatar(friend)}
+              <div class="person-copy">
+                <strong>
+                  ${escapeHtml(friend.name)}
+                  <span class="friend-tag-badge">${escapeHtml(friend.tag || `@${friend.id}`)}</span>
+                </strong>
+                <span>${escapeHtml(friend.caption)}</span>
+              </div>
+              <button class="secondary-button" data-action="view-friend" data-friend-id="${friend.id}">Xem quán</button>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+
+      <aside class="invite-card">
+        <div class="eyebrow" style="color:#ffd5c4">Rủ thêm một người</div>
+        <h3>Quán ngon hơn khi có người để tag.</h3>
+        <p>Gửi @tag của bạn cho bạn bè để cùng tìm quán ăn và lưu lại những khoảnh khắc đáng nhớ.</p>
+        <button class="secondary-button" data-action="copy-my-tag">Sao chép ${escapeHtml(myTag)} ${icon("share")}</button>
+      </aside>
+    </div>`;
 }
 
 function renderInbox() {
@@ -1646,16 +1735,92 @@ function tryMountGoogleButton() {
   }
 }
 
+function copyMyTag() {
+  const tag = getUserTag(state.user);
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(tag).then(() => {
+      showToast(`Đã sao chép tag ${tag}!`, "success");
+    }).catch(() => {
+      showToast(`Tag của bạn: ${tag}`, "info");
+    });
+  } else {
+    showToast(`Tag của bạn: ${tag}`, "info");
+  }
+}
+
+function addFriendByTag() {
+  const input = document.querySelector("#friend-tag-input");
+  let val = input?.value.trim();
+  if (!val) {
+    showToast("Vui lòng nhập @tag của bạn bè", "error");
+    return;
+  }
+  if (!val.startsWith("@")) val = `@${val}`;
+  const cleanTag = val.toLowerCase();
+
+  const myTag = getUserTag(state.user).toLowerCase();
+  if (cleanTag === myTag) {
+    showToast("Đây là @tag của chính bạn mà!", "error");
+    return;
+  }
+
+  if (friends.some((f) => (f.tag || "").toLowerCase() === cleanTag)) {
+    showToast(`Bạn đã kết nối với ${val} rồi`, "info");
+    return;
+  }
+
+  const baseName = val.replace(/^@/, "").replace(/[._]/g, " ").trim();
+  const capitalizedName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+  const newFriend = {
+    id: `friend-${Date.now()}`,
+    tag: val,
+    name: capitalizedName,
+    initials: initials(capitalizedName),
+    caption: "vừa kết nối qua @tag",
+    color: "green",
+  };
+
+  friends = [newFriend, ...friends];
+  saveStorage(friendsStorageKey, friends);
+  if (input) input.value = "";
+  renderApp();
+  showToast(`Đã kết bạn với ${val} thành công! 🎉`, "success");
+}
+
+function saveProfileInfo() {
+  const nameInput = document.querySelector("#profile-name-input");
+  const tagInput = document.querySelector("#profile-tag-input");
+  const newName = nameInput?.value.trim() || state.user?.name || "An Đoàn";
+  let newTag = tagInput?.value.trim() || getUserTag(state.user);
+  if (!newTag.startsWith("@")) newTag = `@${newTag}`;
+
+  state.user = {
+    ...(state.user || {}),
+    id: state.user?.id || `user-${Date.now()}`,
+    name: newName,
+    tag: newTag,
+    email: state.user?.email || "andoanthien08@gmail.com",
+    picture: state.user?.picture || null,
+  };
+
+  saveStorage(googleUserKey, state.user);
+  saveLocalState();
+  state.modal = null;
+  renderApp();
+  showToast(`Đã lưu tag cá nhân: ${newTag}!`, "success");
+}
+
 function renderProfileModal() {
   const isLogged = Boolean(state.user);
-  const currentClientId = getGoogleClientId();
+  const profileName = state.user?.name || "An Đoàn";
+  const myTag = getUserTag(state.user);
 
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ & Tài khoản Google" data-modal-card style="max-width:440px;">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ & Tag cá nhân" data-modal-card style="max-width:440px;">
         <div class="modal-content" style="padding:26px 22px;">
           ${
-            isLogged
+            isLogged && state.user?.picture
               ? `
               <div class="google-user-card">
                 <img src="${escapeHtml(state.user.picture)}" alt="${escapeHtml(state.user.name)}" />
@@ -1668,27 +1833,34 @@ function renderProfileModal() {
               : `
               <div style="text-align:center;margin-bottom:18px;">
                 <div class="avatar green" style="width:64px;height:64px;font-size:22px;margin:0 auto 10px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.08);">
-                  KH
+                  ${escapeHtml(initials(profileName))}
                 </div>
-                <h2 style="font-size:20px;margin:0 0 4px;">Khách khám phá</h2>
-                <p class="muted" style="font-size:13px;margin:0 0 14px;">Đăng nhập Google để đồng bộ danh sách quán đã lưu & ghi chú trên mọi thiết bị.</p>
-                
-                <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:10px;min-height:40px;">
-                  <button type="button" class="google-login-btn" data-action="trigger-google-login" style="width:100%;justify-content:center;padding:10px 14px;font-size:13.5px;">
-                    ${googleSvgIcon()}
-                    <span>Đăng nhập bằng Google</span>
-                  </button>
-                </div>
-                <button type="button" class="text-button" data-action="demo-google-login" style="font-size:12px;color:var(--ink-muted);">
-                  ⚡ Đăng nhập thử nghiệm (Demo)
-                </button>
+                <h2 style="font-size:20px;margin:0 0 2px;">${escapeHtml(profileName)}</h2>
+                <div class="my-tag-badge" style="margin-bottom:10px;">${escapeHtml(myTag)}</div>
               </div>`
           }
 
-          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:18px;">
+          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:10px;">
+              <label for="profile-name-input" style="font-size:12px;font-weight:700;">Tên hiển thị</label>
+              <input id="profile-name-input" class="form-input" type="text" value="${escapeHtml(profileName)}" placeholder="Tên của bạn" />
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label for="profile-tag-input" style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;">
+                <span>Tag cá nhân (@tag)</span>
+                <span style="font-size:11px;color:var(--coral);font-weight:700;">Tag kết bạn</span>
+              </label>
+              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(myTag)}" placeholder="@andoanthien08" />
+            </div>
+            <button type="button" class="primary-button" data-action="save-profile-info" style="width:100%;padding:9px;font-size:12.5px;justify-content:center;">
+              Lưu thay đổi @tag & Tên
+            </button>
+          </div>
+
+          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
-              <span style="font-size:12px;color:var(--ink-muted);">Trạng thái lưu trữ:</span>
-              <span style="font-size:12px;font-weight:700;color:var(--herb);">${isLogged ? "● Đồng bộ Cloud (Google Account)" : "● Lưu trên trình duyệt thiết bị"}</span>
+              <span style="font-size:12px;color:var(--ink-muted);">Bộ nhớ thiết bị:</span>
+              <span style="font-size:12px;font-weight:700;color:var(--herb);">● Tự động bảo vệ</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
               <span style="font-size:12px;color:var(--ink-muted);">Quán đã lưu:</span>
@@ -1700,31 +1872,15 @@ function renderProfileModal() {
             </div>
           </div>
 
-          <div style="display:grid;gap:9px;margin-bottom:16px;">
-            <button type="button" class="primary-button" data-action="export-backup" style="justify-content:center;display:flex;align-items:center;gap:6px;">
+          <div style="display:grid;gap:8px;margin-bottom:14px;">
+            <button type="button" class="secondary-button" data-action="export-backup" style="justify-content:center;display:flex;align-items:center;gap:6px;">
               ${icon("share")} Sao lưu dữ liệu ra file (.json)
             </button>
             <label class="secondary-button" style="justify-content:center;display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;">
               ${icon("add")} Phục hồi dữ liệu từ file
               <input id="modal-import-backup-input" type="file" accept=".json,application/json" hidden />
             </label>
-            ${
-              isLogged
-                ? `<button type="button" class="secondary-button" data-action="logout-user" style="justify-content:center;display:flex;align-items:center;gap:6px;color:#c23f27;">
-                    Đăng xuất tài khoản Google
-                  </button>`
-                : ""
-            }
           </div>
-
-          <details style="margin-bottom:14px;background:rgba(0,0,0,.02);border:1px dashed var(--line);border-radius:12px;padding:8px 12px;font-size:12px;">
-            <summary style="cursor:pointer;color:var(--ink-muted);font-weight:600;">Cấu hình Google OAuth Client ID</summary>
-            <div style="margin-top:8px;">
-              <p class="muted" style="margin:0 0 6px;font-size:11.5px;">Dán Client ID từ Google Cloud Console (OAuth 2.0 Web Client):</p>
-              <input id="google-client-id-input" type="text" value="${escapeHtml(currentClientId)}" style="width:100%;font-size:11.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;box-sizing:border-box;" placeholder="vd: 123456789.apps.googleusercontent.com" />
-              <button type="button" class="secondary-button" data-action="save-google-client-id" style="width:100%;padding:6px;font-size:11.5px;justify-content:center;">Lưu Client ID</button>
-            </div>
-          </details>
 
           <div style="text-align:center;">
             <button type="button" class="text-button" data-action="close-modal" style="font-size:13px;">Đóng</button>
@@ -2037,6 +2193,15 @@ function handleAction(event) {
     case "navigate": state.view = target.dataset.view; state.query = ""; renderApp(); break;
     case "open-inbox": state.view = "inbox"; renderApp(); break;
     case "open-profile": state.modal = { type: "profile" }; renderModal(); break;
+    case "copy-my-tag": copyMyTag(); break;
+    case "add-friend-by-tag": addFriendByTag(); break;
+    case "save-profile-info": saveProfileInfo(); break;
+    case "focus-add-friend": {
+      state.view = "friends";
+      renderApp();
+      setTimeout(() => document.querySelector("#friend-tag-input")?.focus(), 50);
+      break;
+    }
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
