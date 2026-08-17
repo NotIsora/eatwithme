@@ -1533,29 +1533,19 @@ function logoutUser() {
   saveLocalState();
   state.modal = null;
   renderApp();
-  showToast("Đã đăng xuất tài khoản", "success");
+  showToast("Đã đăng xuất tài khoản Google", "success");
 }
 
-function quickGoogleLogin() {
-  const nameInput = document.querySelector("#quick-google-name");
-  const emailInput = document.querySelector("#quick-google-email");
-  const name = nameInput?.value.trim() || "An Trần";
-  const email = emailInput?.value.trim() || "antran.foodie@gmail.com";
-
-  state.user = {
-    id: `google-${Date.now()}`,
-    name,
-    email,
-    picture: "https://lh3.googleusercontent.com/a/default-user=s96-c",
-    loggedAt: new Date().toISOString(),
-  };
-
-  saveStorage(googleUserKey, state.user);
-  saveLocalState();
-  scheduleBackendSync();
-  state.modal = null;
-  renderApp();
-  showToast(`Đã kết nối tài khoản Google: ${name}!`, "success");
+function saveGoogleClientId() {
+  const input = document.querySelector("#google-client-id-input");
+  const val = input?.value.trim();
+  if (!val) {
+    showToast("Vui lòng dán Client ID từ Google Cloud Console", "error");
+    return;
+  }
+  saveStorage(googleClientIdKey, val);
+  showToast("Đã lưu Google Client ID!", "success");
+  renderModal();
 }
 
 function renderAuthModal() {
@@ -1596,6 +1586,7 @@ function renderAuthModal() {
       </div>`;
   }
 
+  const clientId = readStorage(googleClientIdKey, "");
   return `
     <div class="modal-backdrop" data-action="close-modal">
       <article class="modal" role="dialog" aria-modal="true" aria-label="Đăng nhập Google" data-modal-card style="max-width:440px;">
@@ -1604,27 +1595,28 @@ function renderAuthModal() {
             <svg width="28" height="28" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
           </div>
           <div class="eyebrow" style="margin-bottom:4px;">Google Account</div>
-          <h2 style="font-size:24px;margin-bottom:6px;">Đăng nhập Google</h2>
-          <p class="muted" style="font-size:13px;margin-bottom:20px;">Lưu trữ dữ liệu quán ăn vào tài khoản Google để sử dụng trên mọi thiết bị.</p>
+          <h2 style="font-size:24px;margin-bottom:6px;">Đăng nhập bằng Google</h2>
+          <p class="muted" style="font-size:13px;margin-bottom:20px;">Lưu giữ danh sách quán ăn vào tài khoản Google để dùng trên mọi thiết bị.</p>
 
-          <div id="g-signin-btn-slot" style="display:flex;justify-content:center;margin-bottom:14px;min-height:44px;"></div>
+          <div id="g-signin-btn-slot" style="display:flex;justify-content:center;margin-bottom:16px;min-height:44px;"></div>
 
-          <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--ink-muted);font-size:12px;">
-            <span style="flex:1;height:1px;background:var(--line);"></span>
-            <span>HOẶC KẾT NỐI NHANH</span>
-            <span style="flex:1;height:1px;background:var(--line);"></span>
+          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;text-align:left;">
+            <label for="google-client-id-input" style="font-size:12px;font-weight:700;color:var(--ink);display:block;margin-bottom:4px;">
+              Google OAuth Client ID
+            </label>
+            <input id="google-client-id-input" class="form-input" type="text" placeholder="Ví dụ: 123456-abc.apps.googleusercontent.com" value="${escapeHtml(clientId)}" style="font-size:12px;padding:8px 10px;" />
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--coral);text-decoration:none;font-weight:600;">
+                Lấy Client ID miễn phí ↗
+              </a>
+              <button type="button" class="primary-button" data-action="save-google-client-id" style="font-size:11px;padding:6px 12px;">
+                Lưu & Kích hoạt
+              </button>
+            </div>
           </div>
 
-          <form onsubmit="event.preventDefault();" style="display:grid;gap:10px;">
-            <input id="quick-google-name" class="form-input" type="text" placeholder="Tên tài khoản Google của bạn" value="An Trần" />
-            <input id="quick-google-email" class="form-input" type="email" placeholder="Email Google (@gmail.com)" value="antran.foodie@gmail.com" />
-            <button type="button" class="primary-button" data-action="quick-google-login" style="margin-top:4px;">
-              ${icon("check")} Kết nối tài khoản Google
-            </button>
-          </form>
-
           <div style="margin-top:16px;">
-            <button type="button" class="text-button" data-action="close-modal" style="font-size:12px;">Để sau</button>
+            <button type="button" class="text-button" data-action="close-modal" style="font-size:12px;">Đóng</button>
           </div>
         </div>
       </article>
@@ -1642,25 +1634,32 @@ function renderModal() {
   bindModalEvents();
 
   if (state.modal?.type === "auth" && !state.user && window.google?.accounts?.id) {
-    try {
-      const clientId = readStorage(googleClientIdKey, DEFAULT_GOOGLE_CLIENT_ID);
-      google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleCredentialResponse,
-      });
+    const clientId = readStorage(googleClientIdKey, "");
+    if (clientId) {
+      try {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+        });
+        const btnContainer = document.querySelector("#g-signin-btn-slot");
+        if (btnContainer) {
+          google.accounts.id.renderButton(btnContainer, {
+            theme: "outline",
+            size: "large",
+            type: "standard",
+            shape: "pill",
+            text: "signin_with",
+            logo_alignment: "left",
+            width: 280,
+          });
+        }
+      } catch {}
+    } else {
       const btnContainer = document.querySelector("#g-signin-btn-slot");
       if (btnContainer) {
-        google.accounts.id.renderButton(btnContainer, {
-          theme: "outline",
-          size: "large",
-          type: "standard",
-          shape: "pill",
-          text: "signin_with",
-          logo_alignment: "left",
-          width: 280,
-        });
+        btnContainer.innerHTML = `<p style="font-size:12px;color:var(--ink-muted);margin:0;">Vui lòng dán Google Client ID bên dưới để kích hoạt nút đăng nhập chính thức.</p>`;
       }
-    } catch {}
+    }
   }
 }
 
@@ -1946,7 +1945,7 @@ function handleAction(event) {
     case "open-inbox": state.view = "inbox"; renderApp(); break;
     case "open-auth": state.modal = { type: "auth" }; renderModal(); break;
     case "logout-user": logoutUser(); break;
-    case "quick-google-login": quickGoogleLogin(); break;
+    case "save-google-client-id": saveGoogleClientId(); break;
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
