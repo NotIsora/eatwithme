@@ -612,17 +612,7 @@ function placeCard(place, { compact = false } = {}) {
 }
 
 function renderTopbar() {
-  const user = state.user;
-  const userActionBtn = user
-    ? `<button class="user-profile-badge" data-action="open-auth" aria-label="Tài khoản Google">
-        <img src="${escapeHtml(user.picture || "https://lh3.googleusercontent.com/a/default-user=s96-c")}" alt="${escapeHtml(user.name)}" />
-        <span class="user-name">${escapeHtml(user.name.split(" ")[0])}</span>
-       </button>`
-    : `<button class="google-login-btn" data-action="open-auth" aria-label="Đăng nhập Google">
-        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-        <span>Đăng nhập</span>
-       </button>`;
-
+  const profileName = state.user?.name || "An Trần";
   return `
     <header class="topbar">
       <div class="mobile-brand">Eat<span>With</span>Me</div>
@@ -633,7 +623,7 @@ function renderTopbar() {
       <div class="top-actions">
         ${state.installAvailable ? `<button class="install-button" data-action="install-app">Cài app</button>` : ""}
         <button class="icon-button" data-action="open-inbox" aria-label="Mở thông báo">${icon("bell")}<span class="notification-dot"></span></button>
-        ${userActionBtn}
+        <button class="avatar green" data-action="open-profile" aria-label="Trang cá nhân của ${escapeHtml(profileName)}" style="cursor:pointer;border:0;">${escapeHtml(initials(profileName))}</button>
       </div>
     </header>`;
 }
@@ -645,22 +635,7 @@ function renderSidebar() {
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
-  const user = state.user;
-  const userFooter = user
-    ? `<div class="profile-chip" data-action="open-auth" style="cursor:pointer;" aria-label="Thông tin tài khoản">
-        <img src="${escapeHtml(user.picture || "https://lh3.googleusercontent.com/a/default-user=s96-c")}" alt="${escapeHtml(user.name)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" />
-        <div class="profile-copy">
-          <div class="profile-name" style="font-size:13px;font-weight:700;">${escapeHtml(user.name)}</div>
-          <div class="profile-caption" style="font-size:11px;color:var(--herb);display:flex;align-items:center;gap:4px;">
-            <span style="font-size:10px;">●</span> Đã đồng bộ Google
-          </div>
-        </div>
-      </div>`
-    : `<button class="google-login-btn" data-action="open-auth" style="width:100%;justify-content:center;padding:9px 12px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-        <span>Đăng nhập Google</span>
-       </button>`;
-
+  const profileName = state.user?.name || "An Trần";
   return `
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
@@ -668,7 +643,15 @@ function renderSidebar() {
       <nav class="nav" aria-label="Điều hướng chính">
         ${nav.map(([view, iconName, label]) => `<button class="nav-button ${state.view === view ? "active" : ""}" data-action="navigate" data-view="${view}"><span class="icon">${icon(iconName)}</span><span>${label}</span></button>`).join("")}
       </nav>
-      <div class="sidebar-footer">${userFooter}</div>
+      <div class="sidebar-footer">
+        <div class="profile-chip" data-action="open-profile" style="cursor:pointer;" aria-label="Hồ sơ cá nhân">
+          ${avatar({ initials: initials(profileName), color: "green" })}
+          <div class="profile-copy">
+            <div class="profile-name">${escapeHtml(profileName)}</div>
+            <div class="profile-caption">Hà Nội · foodie chậm</div>
+          </div>
+        </div>
+      </div>
     </aside>`;
 }
 
@@ -1548,75 +1531,47 @@ function saveGoogleClientId() {
   renderModal();
 }
 
-function renderAuthModal() {
-  const user = state.user;
-  if (user) {
-    return `
-      <div class="modal-backdrop" data-action="close-modal">
-        <article class="modal" role="dialog" aria-modal="true" aria-label="Tài khoản Google" data-modal-card style="max-width:440px;">
-          <div class="modal-content" style="text-align:center;padding:28px 24px;">
-            <div style="position:relative;display:inline-block;margin-bottom:14px;">
-              <img src="${escapeHtml(user.picture || "https://lh3.googleusercontent.com/a/default-user=s96-c")}" alt="${escapeHtml(user.name)}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--coral);" />
-              <span style="position:absolute;bottom:0;right:0;background:#4285F4;color:white;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:11px;font-weight:bold;border:2px solid white;">G</span>
-            </div>
-            <h2 style="margin-bottom:2px;">${escapeHtml(user.name)}</h2>
-            <p class="muted" style="font-size:13px;margin-bottom:16px;">${escapeHtml(user.email)}</p>
-
-            <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:20px;text-align:left;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <span style="font-size:12px;color:var(--ink-muted);">Trạng thái đồng bộ:</span>
-                <span style="font-size:12px;font-weight:700;color:var(--herb);">● Đang đồng bộ Google</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <span style="font-size:12px;color:var(--ink-muted);">Quán đã lưu:</span>
-                <span style="font-size:12px;font-weight:700;">${state.saved.length} quán</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:12px;color:var(--ink-muted);">Quán tự tạo:</span>
-                <span style="font-size:12px;font-weight:700;">${customPlaces.length} quán</span>
-              </div>
-            </div>
-
-            <div style="display:flex;gap:10px;">
-              <button class="secondary-button" data-action="close-modal" style="flex:1;">Đóng</button>
-              <button class="primary-button" data-action="logout-user" style="flex:1;background:#d33d2a;box-shadow:0 6px 0 #9e2a1b;">Đăng xuất</button>
-            </div>
-          </div>
-        </article>
-      </div>`;
-  }
-
-  const clientId = readStorage(googleClientIdKey, "");
+function renderProfileModal() {
+  const profileName = state.user?.name || "An Trần";
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Đăng nhập Google" data-modal-card style="max-width:440px;">
-        <div class="modal-content" style="padding:28px 24px;text-align:center;">
-          <div style="width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:grid;place-items:center;margin:0 auto 14px;">
-            <svg width="28" height="28" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.17 0 9.97 0 12s.45 3.83 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ cá nhân & Bộ nhớ" data-modal-card style="max-width:440px;">
+        <div class="modal-content" style="padding:28px 24px;">
+          <div style="text-align:center;margin-bottom:18px;">
+            <div class="avatar green" style="width:68px;height:68px;font-size:24px;margin:0 auto 10px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.1);">
+              ${escapeHtml(initials(profileName))}
+            </div>
+            <h2 style="font-size:22px;margin:0 0 2px;">${escapeHtml(profileName)}</h2>
+            <p class="muted" style="font-size:13px;margin:0;">Hà Nội · foodie chậm</p>
           </div>
-          <div class="eyebrow" style="margin-bottom:4px;">Google Account</div>
-          <h2 style="font-size:24px;margin-bottom:6px;">Đăng nhập bằng Google</h2>
-          <p class="muted" style="font-size:13px;margin-bottom:20px;">Lưu giữ danh sách quán ăn vào tài khoản Google để dùng trên mọi thiết bị.</p>
 
-          <div id="g-signin-btn-slot" style="display:flex;justify-content:center;margin-bottom:16px;min-height:44px;"></div>
-
-          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;text-align:left;">
-            <label for="google-client-id-input" style="font-size:12px;font-weight:700;color:var(--ink);display:block;margin-bottom:4px;">
-              Google OAuth Client ID
-            </label>
-            <input id="google-client-id-input" class="form-input" type="text" placeholder="Ví dụ: 123456-abc.apps.googleusercontent.com" value="${escapeHtml(clientId)}" style="font-size:12px;padding:8px 10px;" />
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--coral);text-decoration:none;font-weight:600;">
-                Lấy Client ID miễn phí ↗
-              </a>
-              <button type="button" class="primary-button" data-action="save-google-client-id" style="font-size:11px;padding:6px 12px;">
-                Lưu & Kích hoạt
-              </button>
+          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+              <span style="font-size:12px;color:var(--ink-muted);">Trạng thái bộ nhớ:</span>
+              <span style="font-size:12px;font-weight:700;color:var(--herb);">● Tự động bảo vệ trên máy</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+              <span style="font-size:12px;color:var(--ink-muted);">Quán đã lưu:</span>
+              <span style="font-size:12px;font-weight:700;">${state.saved.length} quán</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--ink-muted);">Quán tự tạo:</span>
+              <span style="font-size:12px;font-weight:700;">${customPlaces.length} quán</span>
             </div>
           </div>
 
-          <div style="margin-top:16px;">
-            <button type="button" class="text-button" data-action="close-modal" style="font-size:12px;">Đóng</button>
+          <div style="display:grid;gap:9px;margin-bottom:16px;">
+            <button type="button" class="primary-button" data-action="export-backup" style="justify-content:center;display:flex;align-items:center;gap:6px;">
+              ${icon("share")} Sao lưu dữ liệu ra file (.json)
+            </button>
+            <label class="secondary-button" style="justify-content:center;display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;">
+              ${icon("add")} Phục hồi dữ liệu từ file
+              <input id="modal-import-backup-input" type="file" accept=".json,application/json" hidden />
+            </label>
+          </div>
+
+          <div style="text-align:center;">
+            <button type="button" class="text-button" data-action="close-modal" style="font-size:13px;">Đóng</button>
           </div>
         </div>
       </article>
@@ -1630,37 +1585,8 @@ function renderModal() {
   if (state.modal.type === "share") root.innerHTML = renderShareModal(state.modal.placeId);
   if (state.modal.type === "note") root.innerHTML = renderNoteModal(state.modal.placeId);
   if (state.modal.type === "add-place") root.innerHTML = renderAddPlaceModal();
-  if (state.modal.type === "auth") root.innerHTML = renderAuthModal();
+  if (state.modal.type === "profile") root.innerHTML = renderProfileModal();
   bindModalEvents();
-
-  if (state.modal?.type === "auth" && !state.user && window.google?.accounts?.id) {
-    const clientId = readStorage(googleClientIdKey, "");
-    if (clientId) {
-      try {
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleCredentialResponse,
-        });
-        const btnContainer = document.querySelector("#g-signin-btn-slot");
-        if (btnContainer) {
-          google.accounts.id.renderButton(btnContainer, {
-            theme: "outline",
-            size: "large",
-            type: "standard",
-            shape: "pill",
-            text: "signin_with",
-            logo_alignment: "left",
-            width: 280,
-          });
-        }
-      } catch {}
-    } else {
-      const btnContainer = document.querySelector("#g-signin-btn-slot");
-      if (btnContainer) {
-        btnContainer.innerHTML = `<p style="font-size:12px;color:var(--ink-muted);margin:0;">Vui lòng dán Google Client ID bên dưới để kích hoạt nút đăng nhập chính thức.</p>`;
-      }
-    }
-  }
 }
 
 function renderPlaceModal(placeId) {
@@ -1931,6 +1857,14 @@ function bindModalEvents() {
     };
     reader.readAsDataURL(file);
   });
+  document.querySelector("#modal-import-backup-input")?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importBackupFile(file);
+      state.modal = null;
+      renderApp();
+    }
+  });
 }
 
 function handleAction(event) {
@@ -1943,9 +1877,7 @@ function handleAction(event) {
   switch (action) {
     case "navigate": state.view = target.dataset.view; state.query = ""; renderApp(); break;
     case "open-inbox": state.view = "inbox"; renderApp(); break;
-    case "open-auth": state.modal = { type: "auth" }; renderModal(); break;
-    case "logout-user": logoutUser(); break;
-    case "save-google-client-id": saveGoogleClientId(); break;
+    case "open-profile": state.modal = { type: "profile" }; renderModal(); break;
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
