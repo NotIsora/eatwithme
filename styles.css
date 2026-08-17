@@ -282,34 +282,85 @@ h3 { font-size: 16px; margin-bottom: 4px; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
   white-space: nowrap;
 }
+.category-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.price-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
 .food-select-pill {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 12px;
+  min-height: 36px;
+  padding: 6px 8px;
   border-radius: 99px;
   font-size: 12px;
   font-weight: 700;
-  line-height: 1.2;
-  border: 2px solid transparent;
+  line-height: 1.15;
+  text-align: center;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, outline .15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  transition: all .16s ease;
+  user-select: none;
 }
 .food-select-pill:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
 }
 .food-select-pill.selected {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-  box-shadow: 0 3px 9px rgba(0,0,0,.15);
+  box-shadow: inset 0 0 0 2px var(--ink), 0 4px 12px rgba(48,34,23,.16);
+  transform: scale(1.02);
+}
+.picker-section {
+  background: rgba(255,255,255,.52);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 12px;
+}
+.picker-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.picker-label-row label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+.picker-label-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+@media (max-width: 500px) {
+  .category-pill-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .price-pill-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .food-select-pill {
+    font-size: 11px;
+    min-height: 34px;
+    padding: 5px 4px;
+  }
 }
 .place-list { display: grid; gap: 12px; }
 .place-card { display: grid; grid-template-columns: 90px minmax(0,1fr) auto; gap: 15px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.57); transition: border .18s, transform .18s, box-shadow .18s; }
