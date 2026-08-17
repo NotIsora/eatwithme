@@ -194,6 +194,10 @@ function resolveBackendBaseUrl() {
 }
 
 function getBackendUserId() {
+  if (state.user?.id) {
+    const cleanId = String(state.user.id).replace(/[^A-Za-z0-9._-]/g, "").slice(0, 60);
+    return `google-${cleanId}`;
+  }
   try {
     const existing = localStorage.getItem(backendUserKey);
     if (existing && /^[A-Za-z0-9._-]{1,80}$/.test(existing)) return existing;
@@ -553,7 +557,11 @@ function isSaved(id) { return state.saved.includes(id); }
 function initials(name) { return name.split(" ").map((word) => word[0]).slice(-2).join("").toUpperCase(); }
 
 function avatar(person, extra = "") {
-  return `<span class="avatar ${person.color || ""} ${extra}" aria-hidden="true">${escapeHtml(person.initials || initials(person.name))}</span>`;
+  if (person?.picture) {
+    return `<span class="avatar ${person.color || ""} ${extra}" aria-hidden="true"><img src="${escapeHtml(person.picture)}" alt="${escapeHtml(person.name || "Avatar")}" class="avatar-img" /></span>`;
+  }
+  const name = person?.name || "Khách";
+  return `<span class="avatar ${person?.color || ""} ${extra}" aria-hidden="true">${escapeHtml(person?.initials || initials(name))}</span>`;
 }
 
 function statusLabel(place) {
@@ -612,7 +620,7 @@ function placeCard(place, { compact = false } = {}) {
 }
 
 function renderTopbar() {
-  const profileName = state.user?.name || "An Trần";
+  const profileName = state.user?.name || "Khách";
   return `
     <header class="topbar">
       <div class="mobile-brand">Eat<span>With</span>Me</div>
@@ -622,8 +630,23 @@ function renderTopbar() {
       </label>
       <div class="top-actions">
         ${state.installAvailable ? `<button class="install-button" data-action="install-app">Cài app</button>` : ""}
+        ${
+          state.user
+            ? `<div class="user-profile-badge" data-action="open-profile" aria-label="Hồ sơ ${escapeHtml(state.user.name)}" title="${escapeHtml(state.user.email)}">
+                <img src="${escapeHtml(state.user.picture)}" alt="${escapeHtml(state.user.name)}" />
+                <span class="user-name">${escapeHtml(state.user.name)}</span>
+              </div>`
+            : `<button type="button" class="google-login-btn" data-action="open-profile" aria-label="Đăng nhập bằng Google">
+                ${googleSvgIcon()}
+                <span>Đăng nhập</span>
+              </button>`
+        }
         <button class="icon-button" data-action="open-inbox" aria-label="Mở thông báo">${icon("bell")}<span class="notification-dot"></span></button>
-        <button class="avatar green" data-action="open-profile" aria-label="Trang cá nhân của ${escapeHtml(profileName)}" style="cursor:pointer;border:0;">${escapeHtml(initials(profileName))}</button>
+        ${
+          !state.user
+            ? `<button class="avatar green" data-action="open-profile" aria-label="Hồ sơ cá nhân" style="cursor:pointer;border:0;">${escapeHtml(initials(profileName))}</button>`
+            : ""
+        }
       </div>
     </header>`;
 }
@@ -635,7 +658,8 @@ function renderSidebar() {
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
-  const profileName = state.user?.name || "An Trần";
+  const profileName = state.user?.name || "Khách khám phá";
+  const userCaption = state.user?.email || "Chưa kết nối Google";
   return `
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
@@ -645,10 +669,10 @@ function renderSidebar() {
       </nav>
       <div class="sidebar-footer">
         <div class="profile-chip" data-action="open-profile" style="cursor:pointer;" aria-label="Hồ sơ cá nhân">
-          ${avatar({ initials: initials(profileName), color: "green" })}
+          ${avatar(state.user || { name: profileName, color: "green" })}
           <div class="profile-copy">
             <div class="profile-name">${escapeHtml(profileName)}</div>
-            <div class="profile-caption">Hà Nội · foodie chậm</div>
+            <div class="profile-caption">${escapeHtml(userCaption)}</div>
           </div>
         </div>
       </div>
@@ -1468,6 +1492,15 @@ async function initInteractiveMap() {
   }
 }
 
+function googleSvgIcon() {
+  return `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+  </svg>`;
+}
+
 function parseJwt(token) {
   try {
     const base64Url = token.split(".")[1];
@@ -1484,6 +1517,64 @@ function parseJwt(token) {
   }
 }
 
+function getGoogleClientId() {
+  return readStorage(googleClientIdKey, DEFAULT_GOOGLE_CLIENT_ID) || DEFAULT_GOOGLE_CLIENT_ID;
+}
+
+function initGoogleAuth() {
+  if (!window.google?.accounts?.id) {
+    window.addEventListener("load", () => {
+      setTimeout(initGoogleAuth, 350);
+    }, { once: true });
+    return;
+  }
+  try {
+    window.google.accounts.id.initialize({
+      client_id: getGoogleClientId(),
+      callback: handleGoogleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+  } catch (err) {
+    console.warn("Google GIS init error:", err);
+  }
+}
+
+function triggerGooglePrompt() {
+  initGoogleAuth();
+  if (window.google?.accounts?.id) {
+    try {
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          const reason = notification.getNotDisplayedReason?.() || notification.getSkippedReason?.() || "";
+          console.info("Google One Tap status:", reason);
+        }
+      });
+    } catch (e) {
+      console.warn("Prompt error:", e);
+    }
+  } else {
+    showToast("Đang kết nối Google Identity Services...", "info");
+  }
+}
+
+function loginDemoGoogleUser() {
+  state.user = {
+    id: "demo-google-user-01",
+    name: "An Trần (Google)",
+    email: "antran.foodie@gmail.com",
+    picture: "https://lh3.googleusercontent.com/a/default-user=s96-c",
+    loggedAt: new Date().toISOString(),
+  };
+  saveStorage(googleUserKey, state.user);
+  backend.userId = getBackendUserId();
+  saveLocalState();
+  bootstrapBackend();
+  state.modal = null;
+  renderApp();
+  showToast(`Chào mừng ${state.user.name} đã đăng nhập Google!`, "success");
+}
+
 function handleGoogleCredentialResponse(response) {
   if (!response?.credential) return;
   const payload = parseJwt(response.credential);
@@ -1496,8 +1587,9 @@ function handleGoogleCredentialResponse(response) {
       loggedAt: new Date().toISOString(),
     };
     saveStorage(googleUserKey, state.user);
+    backend.userId = getBackendUserId();
     saveLocalState();
-    scheduleBackendSync();
+    bootstrapBackend();
     state.modal = null;
     renderApp();
     showToast(`Chào mừng ${state.user.name} đã kết nối Google!`, "success");
@@ -1513,7 +1605,9 @@ function logoutUser() {
       window.google.accounts.id.disableAutoSelect();
     }
   } catch {}
+  backend.userId = getBackendUserId();
   saveLocalState();
+  bootstrapBackend();
   state.modal = null;
   renderApp();
   showToast("Đã đăng xuất tài khoản Google", "success");
@@ -1527,28 +1621,72 @@ function saveGoogleClientId() {
     return;
   }
   saveStorage(googleClientIdKey, val);
+  initGoogleAuth();
   showToast("Đã lưu Google Client ID!", "success");
   renderModal();
 }
 
+function tryMountGoogleButton() {
+  const container = document.querySelector("#google-btn-container");
+  if (container && window.google?.accounts?.id) {
+    try {
+      window.google.accounts.id.renderButton(container, {
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        text: "signin_with",
+        logo_alignment: "left",
+        width: 280,
+      });
+    } catch (e) {
+      console.warn("Mount Google button error:", e);
+    }
+  }
+}
+
 function renderProfileModal() {
-  const profileName = state.user?.name || "An Trần";
+  const isLogged = Boolean(state.user);
+  const currentClientId = getGoogleClientId();
+
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ cá nhân & Bộ nhớ" data-modal-card style="max-width:440px;">
-        <div class="modal-content" style="padding:28px 24px;">
-          <div style="text-align:center;margin-bottom:18px;">
-            <div class="avatar green" style="width:68px;height:68px;font-size:24px;margin:0 auto 10px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.1);">
-              ${escapeHtml(initials(profileName))}
-            </div>
-            <h2 style="font-size:22px;margin:0 0 2px;">${escapeHtml(profileName)}</h2>
-            <p class="muted" style="font-size:13px;margin:0;">Hà Nội · foodie chậm</p>
-          </div>
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ & Tài khoản Google" data-modal-card style="max-width:440px;">
+        <div class="modal-content" style="padding:26px 22px;">
+          ${
+            isLogged
+              ? `
+              <div class="google-user-card">
+                <img src="${escapeHtml(state.user.picture)}" alt="${escapeHtml(state.user.name)}" />
+                <div style="min-width:0;flex:1;">
+                  <h2 style="font-size:18px;margin:0 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.name)}</h2>
+                  <p class="muted" style="font-size:12px;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.email)}</p>
+                  <span class="google-sync-tag">✓ Đã đồng bộ Google</span>
+                </div>
+              </div>`
+              : `
+              <div style="text-align:center;margin-bottom:18px;">
+                <div class="avatar green" style="width:64px;height:64px;font-size:22px;margin:0 auto 10px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+                  KH
+                </div>
+                <h2 style="font-size:20px;margin:0 0 4px;">Khách khám phá</h2>
+                <p class="muted" style="font-size:13px;margin:0 0 14px;">Đăng nhập Google để đồng bộ danh sách quán đã lưu & ghi chú trên mọi thiết bị.</p>
+                
+                <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:10px;min-height:40px;">
+                  <button type="button" class="google-login-btn" data-action="trigger-google-login" style="width:100%;justify-content:center;padding:10px 14px;font-size:13.5px;">
+                    ${googleSvgIcon()}
+                    <span>Đăng nhập bằng Google</span>
+                  </button>
+                </div>
+                <button type="button" class="text-button" data-action="demo-google-login" style="font-size:12px;color:var(--ink-muted);">
+                  ⚡ Đăng nhập thử nghiệm (Demo)
+                </button>
+              </div>`
+          }
 
           <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:18px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
-              <span style="font-size:12px;color:var(--ink-muted);">Trạng thái bộ nhớ:</span>
-              <span style="font-size:12px;font-weight:700;color:var(--herb);">● Tự động bảo vệ trên máy</span>
+              <span style="font-size:12px;color:var(--ink-muted);">Trạng thái lưu trữ:</span>
+              <span style="font-size:12px;font-weight:700;color:var(--herb);">${isLogged ? "● Đồng bộ Cloud (Google Account)" : "● Lưu trên trình duyệt thiết bị"}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
               <span style="font-size:12px;color:var(--ink-muted);">Quán đã lưu:</span>
@@ -1568,7 +1706,23 @@ function renderProfileModal() {
               ${icon("add")} Phục hồi dữ liệu từ file
               <input id="modal-import-backup-input" type="file" accept=".json,application/json" hidden />
             </label>
+            ${
+              isLogged
+                ? `<button type="button" class="secondary-button" data-action="logout-user" style="justify-content:center;display:flex;align-items:center;gap:6px;color:#c23f27;">
+                    Đăng xuất tài khoản Google
+                  </button>`
+                : ""
+            }
           </div>
+
+          <details style="margin-bottom:14px;background:rgba(0,0,0,.02);border:1px dashed var(--line);border-radius:12px;padding:8px 12px;font-size:12px;">
+            <summary style="cursor:pointer;color:var(--ink-muted);font-weight:600;">Cấu hình Google OAuth Client ID</summary>
+            <div style="margin-top:8px;">
+              <p class="muted" style="margin:0 0 6px;font-size:11.5px;">Dán Client ID từ Google Cloud Console (OAuth 2.0 Web Client):</p>
+              <input id="google-client-id-input" type="text" value="${escapeHtml(currentClientId)}" style="width:100%;font-size:11.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;box-sizing:border-box;" placeholder="vd: 123456789.apps.googleusercontent.com" />
+              <button type="button" class="secondary-button" data-action="save-google-client-id" style="width:100%;padding:6px;font-size:11.5px;justify-content:center;">Lưu Client ID</button>
+            </div>
+          </details>
 
           <div style="text-align:center;">
             <button type="button" class="text-button" data-action="close-modal" style="font-size:13px;">Đóng</button>
@@ -1585,7 +1739,10 @@ function renderModal() {
   if (state.modal.type === "share") root.innerHTML = renderShareModal(state.modal.placeId);
   if (state.modal.type === "note") root.innerHTML = renderNoteModal(state.modal.placeId);
   if (state.modal.type === "add-place") root.innerHTML = renderAddPlaceModal();
-  if (state.modal.type === "profile") root.innerHTML = renderProfileModal();
+  if (state.modal.type === "profile") {
+    root.innerHTML = renderProfileModal();
+    tryMountGoogleButton();
+  }
   bindModalEvents();
 }
 
@@ -1952,6 +2109,10 @@ function handleAction(event) {
       break;
     case "confirm-share": confirmShare(target.dataset.placeId); break;
     case "saved-filter": state.savedFilter = target.dataset.filter; renderApp(); break;
+    case "trigger-google-login": triggerGooglePrompt(); break;
+    case "demo-google-login": loginDemoGoogleUser(); break;
+    case "logout-user": logoutUser(); break;
+    case "save-google-client-id": saveGoogleClientId(); break;
     case "invite-friend": showToast("Đã sao chép link mời bạn bè", "success"); break;
     case "view-friend": showToast("Đang mở danh sách quán của bạn bè", "success"); break;
     case "mark-read": showToast("Đã đánh dấu tất cả là đã đọc", "success"); break;
@@ -2033,6 +2194,7 @@ if ("serviceWorker" in navigator) {
 
 loadLeaflet().catch(() => undefined);
 loadNativeGeolocation().catch(() => undefined);
+initGoogleAuth();
 renderApp();
 startLocationPrefetch();
 bootstrapBackend();
