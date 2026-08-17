@@ -68,6 +68,7 @@ export default async function handler(req, res) {
     const raw = (url.searchParams.get("tag") || "").trim().toLowerCase();
     const tag = raw.startsWith("@") ? raw : `@${raw}`;
     const profiles = memoryStore.user_profiles || {};
+    const tags = memoryStore.tags || {};
 
     let matched = null;
     for (const [id, prof] of Object.entries(profiles)) {
@@ -77,10 +78,22 @@ export default async function handler(req, res) {
       }
     }
 
+    if (!matched && tags[tag]) {
+      const ownerId = tags[tag];
+      const baseName = tag.replace(/^@/, "").replace(/[._]/g, " ").trim();
+      const capitalized = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+      matched = {
+        id: ownerId,
+        name: capitalized,
+        tag,
+        caption: "tài khoản đã đăng ký trên máy chủ",
+      };
+    }
+
     if (matched) {
       return sendJson(res, 200, { ok: true, user: matched });
     } else {
-      return sendJson(res, 404, { ok: false, error: `Không tìm thấy người dùng có tag ${tag}` });
+      return sendJson(res, 404, { ok: false, error: `Không tìm thấy tài khoản có tag ${tag} trên máy chủ` });
     }
   }
 

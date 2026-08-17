@@ -1936,10 +1936,19 @@ async function addFriendByTag() {
   let val = input?.value.trim();
   if (!val) {
     showToast("Vui lòng nhập @tag của bạn bè", "error");
+    input?.focus();
     return;
   }
   if (!val.startsWith("@")) val = `@${val}`;
   const cleanTag = val.toLowerCase();
+
+  // Validate format
+  const formatCheck = validateTagFormat(cleanTag);
+  if (!formatCheck.valid) {
+    showToast(formatCheck.message, "error");
+    input?.focus();
+    return;
+  }
 
   const myTag = getUserTag(state.user).toLowerCase();
   if (cleanTag === myTag) {
@@ -1952,21 +1961,27 @@ async function addFriendByTag() {
     return;
   }
 
-  showToast(`Đang tìm kiếm ${val} trên máy chủ...`, "info");
+  showToast(`Đang kiểm tra tài khoản ${val}...`, "info");
 
-  try {
-    const res = await fetch(`/api/v1/users/search?tag=${encodeURIComponent(cleanTag)}`);
-    if (res.ok) {
+  const backendBase = resolveBackendBaseUrl();
+  if (backendBase) {
+    try {
+      const res = await fetch(`${backendBase}/v1/users/search?tag=${encodeURIComponent(cleanTag)}`, {
+        headers: {
+          Accept: "application/json",
+          "X-EatWithMe-User": state.user?.id || getBackendUserId(),
+        },
+      });
       const json = await res.json();
-      if (json.ok && json.user) {
+      if (res.ok && json.ok && json.user) {
         const sUser = json.user;
         const newFriend = {
           id: sUser.id || `friend-${Date.now()}`,
           tag: sUser.tag || val,
           name: sUser.name || val.replace(/^@/, ""),
           initials: initials(sUser.name || val.replace(/^@/, "")),
-          caption: "người dùng đã xác thực từ máy chủ",
-          color: "green",
+          caption: sUser.caption || "tài khoản đã xác thực từ máy chủ",
+          color: sUser.color || "green",
           picture: sUser.picture || null,
         };
 
@@ -1976,29 +1991,40 @@ async function addFriendByTag() {
         renderApp();
         showToast(`Đã tìm thấy & kết bạn với ${newFriend.name} (${val})! 🎉`, "success");
         return;
+      } else {
+        showToast(json.error || `Tài khoản ${val} không tồn tại trên hệ thống!`, "error");
+        input?.focus();
+        return;
       }
+    } catch (e) {
+      console.warn("Server search error:", e);
     }
-  } catch (e) {
-    // offline or static host fallback
   }
 
-  // Fallback if server doesn't have it or offline
-  const baseName = val.replace(/^@/, "").replace(/[._]/g, " ").trim();
-  const capitalizedName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
-  const newFriend = {
-    id: `friend-${Date.now()}`,
-    tag: val,
-    name: capitalizedName,
-    initials: initials(capitalizedName),
-    caption: "vừa kết nối qua @tag",
-    color: "green",
-  };
+  // Local-First / Offline mode existence check
+  const claimed = getClaimedTags();
+  if (claimed[cleanTag]) {
+    const ownerId = claimed[cleanTag];
+    const baseName = val.replace(/^@/, "").replace(/[._]/g, " ").trim();
+    const capitalizedName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
+    const newFriend = {
+      id: ownerId || `friend-${Date.now()}`,
+      tag: val,
+      name: capitalizedName,
+      initials: initials(capitalizedName),
+      caption: "tài khoản đã đăng ký",
+      color: "green",
+    };
 
-  friends = [newFriend, ...friends];
-  saveStorage(friendsStorageKey, friends);
-  if (input) input.value = "";
-  renderApp();
-  showToast(`Đã kết bạn với ${val}! 🎉`, "success");
+    friends = [newFriend, ...friends];
+    saveStorage(friendsStorageKey, friends);
+    if (input) input.value = "";
+    renderApp();
+    showToast(`Đã tìm thấy & kết bạn với ${val}! 🎉`, "success");
+  } else {
+    showToast(`Không tìm thấy tài khoản "${val}" trên hệ thống. Vui lòng kiểm tra lại @tag!`, "error");
+    input?.focus();
+  }
 }
 
 function saveProfileInfo() {
