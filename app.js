@@ -284,6 +284,8 @@ const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
 const mapState = {
   instance: null,
   userMarker: null,
+  accuracyCircle: null,
+  activeWatchId: null,
   userPosition: null,
   savedMarkers: new Map(),
   leafletPromise: null,
@@ -776,7 +778,7 @@ async function requestPrecisePosition(deadlineMs = 3500) {
   });
 }
 
-function renderUserMarkerOnMap(point, { refining = false, precise = false, animate = true } = {}) {
+function renderUserMarkerOnMap(point, { refining = false, precise = false, animate = true, accuracy = null } = {}) {
   if (!mapState.instance || !window.L) return;
   mapState.userPosition = point;
   mapState.isRefining = refining;
@@ -788,7 +790,28 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
   } else {
     mapState.userMarker = window.L.marker(point, {
       icon: userMarkerIcon(window.L, { refining, precise }),
+      zIndexOffset: 1000,
     }).addTo(mapState.instance);
+  }
+
+  // Google Maps-style accuracy halo circle
+  const radius = Number.isFinite(accuracy) ? Math.max(10, Math.min(accuracy, 1200)) : null;
+  if (radius && radius < 1200) {
+    if (mapState.accuracyCircle) {
+      mapState.accuracyCircle.setLatLng(point).setRadius(radius);
+    } else {
+      mapState.accuracyCircle = window.L.circle(point, {
+        radius,
+        color: "#2c6a52",
+        fillColor: "#2c6a52",
+        fillOpacity: 0.12,
+        weight: 1.5,
+        interactive: false,
+      }).addTo(mapState.instance);
+    }
+  } else if (mapState.accuracyCircle) {
+    mapState.accuracyCircle.remove();
+    mapState.accuracyCircle = null;
   }
 
   if (animate) {
@@ -841,31 +864,154 @@ async function fetchIpLocation() {
   return null;
 }
 
+function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
+  if (isNativeCapacitor()) {
+    return requestPrecisePosition(maxWaitMs);
+  }
+  if (!navigator.geolocation) {
+    return Promise.resolve({ error: { code: 2, message: "Geolocation not supported" } });
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let bestAccuracy = Infinity;
+    let bestCoords = null;
+    let watchId = null;
+    let fallbackTimeout = null;
+
+    function cleanup() {
+      if (watchId !== null) {
+        try { navigator.geolocation.clearWatch(watchId); } catch { /* ignore */ }
+        watchId = null;
+      }
+      if (fallbackTimeout) {
+        window.clearTimeout(fallbackTimeout);
+        fallbackTimeout = null;
+      }
+    }
+
+    function finish(result) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    }
+
+    // Low-accuracy Wi-Fi Positioning fallback (Google Location Services on Wi-Fi BSSID)
+    function tryLowAccuracyFallback() {
+      if (settled || bestCoords) return;
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (settled) return;
+            if (pos?.coords) {
+              bestCoords = pos.coords;
+              bestAccuracy = pos.coords.accuracy || 100;
+              if (typeof onUpdate === "function") onUpdate(pos, { source: "wifi" });
+              finish({ position: pos, source: "wifi" });
+            }
+          },
+          (err) => {
+            if (settled) return;
+            if (!bestCoords) {
+              finish({ error: err || { code: 2 } });
+            }
+          },
+          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+        );
+      } catch (e) {
+        finish({ error: { code: 2 } });
+      }
+    }
+
+    // Safety timeout: If high accuracy doesn't provide a fix within 2.8s, run low accuracy Wi-Fi fallback
+    fallbackTimeout = window.setTimeout(() => {
+      if (bestCoords) {
+        finish({ position: { coords: bestCoords }, source: "best-stream" });
+      } else {
+        tryLowAccuracyFallback();
+        window.setTimeout(() => {
+          if (!settled) {
+            if (bestCoords) finish({ position: { coords: bestCoords }, source: "best-stream" });
+            else finish({ error: { code: 3, message: "Timeout" } });
+          }
+        }, 3000);
+      }
+    }, 2800);
+
+    // Primary: Google Maps-style streaming with High Accuracy
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (settled) return;
+          const coords = pos?.coords;
+          if (!coords) return;
+          const accuracy = coords.accuracy || 100;
+
+          if (accuracy < bestAccuracy) {
+            bestAccuracy = accuracy;
+            bestCoords = coords;
+          }
+
+          if (typeof onUpdate === "function") {
+            onUpdate(pos, { source: accuracy <= 35 ? "gps" : "wifi" });
+          }
+
+          // If high quality fix arrives (<= 25m), finish promptly
+          if (accuracy <= 25) {
+            finish({ position: pos, source: "gps", precise: true });
+          }
+        },
+        (err) => {
+          if (settled) return;
+          // If code 1 (permission denied), stop immediately
+          if (err?.code === 1) {
+            finish({ error: err });
+            return;
+          }
+          // If code 2 (unavailable) or code 3 (timeout on high accuracy), run Wi-Fi fallback immediately
+          tryLowAccuracyFallback();
+        },
+        { enableHighAccuracy: true, timeout: 7000, maximumAge: 10000 },
+      );
+    } catch {
+      tryLowAccuracyFallback();
+    }
+  });
+}
+
 let locationPrefetchPromise = null;
 
 function startLocationPrefetch() {
   if (locationPrefetchPromise) return locationPrefetchPromise;
   locationPrefetchPromise = (async () => {
     try {
-      const gps = await requestPrecisePosition(6000);
-      if (gps?.position?.coords) {
-        const { latitude, longitude, accuracy } = gps.position.coords;
-        const pt = [latitude, longitude];
-        mapState.userPosition = pt;
-        mapState.hasLocatedUser = true;
-        saveStorage(locationStorageKey, {
-          lat: Math.round(pt[0] * 10000) / 10000,
-          lng: Math.round(pt[1] * 10000) / 10000,
-          accuracy: Math.round(accuracy || 0),
-          isPrecise: true,
-          timestamp: Date.now(),
-        });
-        if (mapState.instance) {
-          renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
-          updateMapCaption(`Vị trí chính xác · độ chuẩn ±${Math.round(accuracy || 10)}m`);
-        }
-        return gps;
-      }
+      const result = await requestGoogleMapsLocation({
+        onUpdate: (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          const pt = [latitude, longitude];
+          mapState.userPosition = pt;
+          mapState.hasLocatedUser = true;
+          saveStorage(locationStorageKey, {
+            lat: Math.round(pt[0] * 10000) / 10000,
+            lng: Math.round(pt[1] * 10000) / 10000,
+            accuracy: Math.round(accuracy || 0),
+            isPrecise: accuracy <= 50,
+            timestamp: Date.now(),
+          });
+          if (mapState.instance) {
+            renderUserMarkerOnMap(pt, {
+              refining: accuracy > 35,
+              precise: accuracy <= 35,
+              animate: true,
+              accuracy,
+            });
+            const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí theo Wi-Fi";
+            updateMapCaption(`${label} · độ chuẩn ±${Math.round(accuracy || 10)}m`);
+          }
+        },
+      });
+      if (result?.position?.coords) return result;
     } catch {
       /* ignore */
     }
@@ -896,46 +1042,67 @@ async function locateDevice({ silent = false } = {}) {
   if (mapState.locationPending) return;
 
   mapState.locationPending = true;
-  if (!silent) showToast("Đang lấy tọa độ GPS chính xác…", "success");
+  if (!silent) showToast("Đang định vị chuẩn xác…", "success");
 
   if (mapState.userPosition) {
     renderUserMarkerOnMap(mapState.userPosition, { refining: true, precise: false, animate: !silent });
-    updateMapCaption("Đang tìm tín hiệu GPS chính xác…");
+    updateMapCaption("Đang làm mịn tín hiệu vị trí…");
   } else {
-    updateMapCaption("Đang tìm kiếm vệ tinh GPS & Wi-Fi…");
+    updateMapCaption("Đang tìm tín hiệu GPS & Wi-Fi…");
   }
 
   try {
-    const gpsResult = await requestPrecisePosition(8000);
+    const streamResult = await requestGoogleMapsLocation({
+      onUpdate: (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        const pt = [latitude, longitude];
+        mapState.userPosition = pt;
+        saveStorage(locationStorageKey, {
+          lat: Math.round(pt[0] * 10000) / 10000,
+          lng: Math.round(pt[1] * 10000) / 10000,
+          accuracy: Math.round(accuracy || 0),
+          isPrecise: accuracy <= 50,
+          timestamp: Date.now(),
+        });
+        renderUserMarkerOnMap(pt, {
+          refining: accuracy > 35,
+          precise: accuracy <= 35,
+          animate: true,
+          accuracy,
+        });
+        const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí theo Wi-Fi/Mạng";
+        updateMapCaption(`${label} · độ chuẩn ±${Math.round(accuracy || 10)}m`);
+      },
+    });
 
-    if (gpsResult?.position?.coords) {
-      const { latitude, longitude, accuracy } = gpsResult.position.coords;
+    if (streamResult?.position?.coords) {
+      const { latitude, longitude, accuracy } = streamResult.position.coords;
       const pt = [latitude, longitude];
       mapState.userPosition = pt;
       mapState.hasLocatedUser = true;
-      saveStorage(locationStorageKey, {
-        lat: Math.round(pt[0] * 10000) / 10000,
-        lng: Math.round(pt[1] * 10000) / 10000,
-        accuracy: Math.round(accuracy || 0),
-        isPrecise: true,
-        timestamp: Date.now(),
-      });
-      renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true });
-      mapState.instance.setView(pt, 15, { animate: true });
-      updateMapCaption(`Vị trí chính xác (độ chuẩn ±${Math.round(accuracy || 10)}m)`);
-      if (!silent) showToast("Đã định vị chính xác vị trí của bạn", "success");
+      renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true, accuracy });
+      mapState.instance.setView(pt, Math.min(16, Math.max(14, accuracy <= 30 ? 16 : 14)), { animate: true });
+      const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
+      updateMapCaption(`${label} (độ chuẩn ±${Math.round(accuracy || 10)}m) · bản đồ đã sẵn sàng`);
+      if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
     } else {
-      const ip = await fetchIpLocation();
-      if (ip) {
-        const pt = [ip.lat, ip.lng];
-        renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
-        mapState.instance.setView(pt, 13, { animate: true });
-        updateMapCaption(`Không bắt được GPS · vị trí mạng: ${escapeHtml(ip.city)}`);
-        if (!silent) showToast(`Không bắt được GPS · dùng vị trí mạng ${ip.city}`, "error");
-      } else {
-        const msg = gpsResult?.error?.code === 1 ? "Bạn chưa cấp quyền vị trí cho trình duyệt" : "Không thể lấy tọa độ GPS thiết bị";
-        updateMapCaption(msg);
+      const err = streamResult?.error;
+      if (err?.code === 1) {
+        const msg = "Vui lòng nhấn biểu tượng 🔒 trên thanh địa chỉ để cấp quyền vị trí";
+        updateMapCaption("Chưa cấp quyền vị trí cho trình duyệt");
         if (!silent) showToast(msg, "error");
+      } else {
+        const ip = await fetchIpLocation();
+        if (ip) {
+          const pt = [ip.lat, ip.lng];
+          renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
+          mapState.instance.setView(pt, 13, { animate: true });
+          updateMapCaption(`Vị trí khu vực (${escapeHtml(ip.city)})`);
+          if (!silent) showToast(`Hiển thị khu vực ${ip.city}`, "success");
+        } else {
+          updateMapCaption("Không thể lấy vị trí · đang hiển thị khu vực mặc định");
+          if (!silent) showToast("Không thể xác định vị trí", "error");
+        }
       }
     }
   } finally {
