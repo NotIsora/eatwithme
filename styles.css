@@ -278,6 +278,39 @@ h3 { font-size: 16px; margin-bottom: 4px; }
   color: white;
   border-color: var(--coral);
 }
+.food-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.food-select-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, outline .15s ease;
+}
+.food-select-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,0,0,.12);
+}
+.food-select-pill.selected {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  box-shadow: 0 3px 9px rgba(0,0,0,.15);
+}
 .place-list { display: grid; gap: 12px; }
 .place-card { display: grid; grid-template-columns: 90px minmax(0,1fr) auto; gap: 15px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.57); transition: border .18s, transform .18s, box-shadow .18s; }
 .place-card:hover { border-color: #e7b6a6; box-shadow: 0 8px 20px rgba(56,38,23,.06); transform: translateY(-1px); }
