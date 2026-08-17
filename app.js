@@ -156,7 +156,7 @@ const defaultClaimedTags = {
   "@quanle.hanoi": "quan",
   "@linh.foodlover": "linh",
   "@minhpham.eat": "minh",
-  "@andoanthien08": "current_user",
+  "@eatwithme": "current_user",
 };
 
 function getClaimedTags() {
@@ -212,12 +212,12 @@ function getUserTag(user) {
     const prefix = user.email.split("@")[0].replace(/[^a-zA-Z0-9._]/g, "").toLowerCase();
     return `@${prefix}`;
   }
-  if (user?.name) {
+  if (user?.name && user.name !== "Eat with me") {
     const ascii = user.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
     const clean = ascii.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return `@${clean || "user"}`;
+    return `@${clean || "eatwithme"}`;
   }
-  return "@andoanthien08";
+  return "@eatwithme";
 }
 
 const activities = [
@@ -626,8 +626,10 @@ function escapeHtml(value) {
 
 function icon(name) { return `<span aria-hidden="true">${ICONS[name] || "•"}</span>`; }
 function getPlace(id) { return places.find((place) => place.id === id); }
-function isSaved(id) { return state.saved.includes(id); }
-function initials(name) { return name.split(" ").map((word) => word[0]).slice(-2).join("").toUpperCase(); }
+function initials(name) {
+  if (!name || name === "Eat with me") return "EW";
+  return name.split(" ").map((word) => word[0]).slice(-2).join("").toUpperCase();
+}
 
 function avatar(person, extra = "") {
   if (person?.picture) {
@@ -731,7 +733,7 @@ function renderSidebar() {
     ["friends", "friends", "Bạn bè"],
     ["inbox", "inbox", "Hộp thư"],
   ];
-  const profileName = state.user?.name || "An Đoàn";
+  const profileName = state.user?.name || "Eat with me";
   const myTag = getUserTag(state.user);
   const userCaption = `<span class="profile-handle">${escapeHtml(myTag)}</span>`;
   return `
@@ -893,7 +895,7 @@ function renderFriends() {
     <div class="my-tag-card">
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="avatar green" style="width:46px;height:46px;font-size:16px;">
-          ${escapeHtml(initials(state.user?.name || "An Đoàn"))}
+          ${escapeHtml(initials(state.user?.name || "Eat with me"))}
         </div>
         <div>
           <div style="font-size:12px;color:var(--ink-muted);margin-bottom:2px;">Tag cá nhân của bạn:</div>
@@ -1843,8 +1845,8 @@ function addFriendByTag() {
 function saveProfileInfo() {
   const nameInput = document.querySelector("#profile-name-input");
   const tagInput = document.querySelector("#profile-tag-input");
-  const newName = nameInput?.value.trim() || state.user?.name || "An Đoàn";
-  const rawTag = tagInput?.value.trim() || getUserTag(state.user);
+  const newName = nameInput?.value.trim() || state.user?.name || "Eat with me";
+  const rawTag = tagInput?.value.trim() || state.user?.tag || "@eatwithme";
 
   const myId = state.user?.id || "current_user";
   const check = checkTagAvailability(rawTag, myId);
@@ -1888,7 +1890,7 @@ function saveProfileInfo() {
 
 function renderProfileModal() {
   const isLogged = Boolean(state.user);
-  const profileName = state.user?.name || "An Đoàn";
+  const profileName = state.user?.name || "Eat with me";
   const myTag = getUserTag(state.user);
 
   return `
@@ -1919,14 +1921,14 @@ function renderProfileModal() {
           <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:16px;">
             <div class="form-group" style="margin-bottom:10px;">
               <label for="profile-name-input" style="font-size:12px;font-weight:700;">Tên hiển thị</label>
-              <input id="profile-name-input" class="form-input" type="text" value="${escapeHtml(profileName)}" placeholder="Tên của bạn" />
+              <input id="profile-name-input" class="form-input" type="text" value="${escapeHtml(state.user?.name || "")}" placeholder="Eat with me" />
             </div>
             <div class="form-group" style="margin-bottom:10px;">
               <label for="profile-tag-input" style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;">
                 <span>Tag cá nhân (@tag độc nhất)</span>
                 <span style="font-size:11px;color:var(--coral);font-weight:700;">Không trùng lặp</span>
               </label>
-              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(myTag)}" placeholder="@andoanthien08" autocomplete="off" />
+              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(state.user?.tag || "")}" placeholder="@eatwithme" autocomplete="off" />
               <div id="tag-validation-status" style="margin-top:4px;font-size:11px;min-height:16px;"></div>
             </div>
             <button type="button" class="primary-button" data-action="save-profile-info" style="width:100%;padding:9px;font-size:12.5px;justify-content:center;">
