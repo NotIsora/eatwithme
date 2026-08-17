@@ -1330,10 +1330,13 @@ function renderAddPlaceModal() {
               <input id="new-place-name" class="form-input" type="text" placeholder="Ví dụ: Phở Bát Đàn, Sushi Kei, Pizza 4P's..." required autofocus />
             </div>
 
-            <div class="form-group">
-              <label>Dạng đồ ăn <span style="color:var(--coral)">*</span></label>
+            <div class="picker-section">
+              <div class="picker-label-row">
+                <label>Dạng đồ ăn <span style="color:var(--coral)">*</span></label>
+                <span id="selected-category-badge" class="picker-label-badge">Đang chọn: <strong>Món Việt</strong></span>
+              </div>
               <input id="new-place-category" type="hidden" value="Món Việt" />
-              <div class="category-pill-grid" style="display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto;padding:2px 0;">
+              <div class="category-pill-grid">
                 ${FOOD_CATEGORIES.map((cat, idx) => `
                   <button type="button" class="food-select-pill ${idx === 4 ? "selected" : ""}" data-action="pick-food-category" data-val="${cat.name}" style="background:${cat.bg};color:${cat.color};${cat.border ? `border:1px solid ${cat.border};` : ""}">
                     ${escapeHtml(cat.name)}
@@ -1342,10 +1345,13 @@ function renderAddPlaceModal() {
               </div>
             </div>
 
-            <div class="form-group">
-              <label>Mức giá tiền <span style="color:var(--coral)">*</span></label>
+            <div class="picker-section">
+              <div class="picker-label-row">
+                <label>Mức giá tiền <span style="color:var(--coral)">*</span></label>
+                <span id="selected-price-badge" class="picker-label-badge">Đang chọn: <strong>&lt;100k</strong></span>
+              </div>
               <input id="new-place-price" type="hidden" value="<100k" />
-              <div class="price-pill-grid" style="display:flex;flex-wrap:wrap;gap:6px;">
+              <div class="price-pill-grid">
                 ${PRICE_TIERS.map((tier, idx) => `
                   <button type="button" class="food-select-pill ${idx === 0 ? "selected" : ""}" data-action="pick-price-tier" data-val="${tier.name}" style="background:${tier.bg};color:${tier.color};">
                     ${escapeHtml(tier.name)}
@@ -1550,14 +1556,18 @@ function handleAction(event) {
     case "submit-new-place": submitNewPlace(); break;
     case "pick-food-category": {
       const catInput = document.querySelector("#new-place-category");
+      const badge = document.querySelector("#selected-category-badge");
       if (catInput) catInput.value = target.dataset.val;
+      if (badge) badge.innerHTML = `Đang chọn: <strong>${escapeHtml(target.dataset.val)}</strong>`;
       target.parentElement?.querySelectorAll(".food-select-pill").forEach((btn) => btn.classList.remove("selected"));
       target.classList.add("selected");
       break;
     }
     case "pick-price-tier": {
       const priceInput = document.querySelector("#new-place-price");
+      const badge = document.querySelector("#selected-price-badge");
       if (priceInput) priceInput.value = target.dataset.val;
+      if (badge) badge.innerHTML = `Đang chọn: <strong>${escapeHtml(target.dataset.val)}</strong>`;
       target.parentElement?.querySelectorAll(".food-select-pill").forEach((btn) => btn.classList.remove("selected"));
       target.classList.add("selected");
       break;
