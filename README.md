@@ -58,7 +58,19 @@ GET /api/v1/state
 PUT /api/v1/state
 ```
 
-Saved places, ghi chú và collections được lưu bền vững trong `db/runtime-state.json` (file này đã được `.gitignore`). Mỗi browser/thiết bị có một `X-EatWithMe-User` riêng để dữ liệu không bị trộn. Frontend dùng API trước và tự động rơi về `localStorage` khi offline hoặc API chưa được deploy.
+Saved places, ghi chú và collections được lưu bền vững trong `db/runtime-state.json` (file này đã được `.gitignore`). Mỗi browser/thiết bị có một `X-EatWithMe-User` riêng (hoặc ID tài khoản Google khi đã đăng nhập) để dữ liệu không bị trộn. Frontend dùng API trước và tự động rơi về `localStorage` khi offline hoặc API chưa được deploy.
+
+### Đăng nhập Google (Google Identity Services)
+
+Ứng dụng tích hợp sẵn bộ SDK **Google Identity Services (GIS)** của Google:
+
+- Khi chưa đăng nhập: Ứng dụng hoạt động ở chế độ khách (Guest) và lưu trữ cục bộ.
+- Khi đăng nhập Google: Hệ thống tự động lấy ảnh đại diện, tên, email và đồng bộ toàn bộ quán ăn đã lưu & ghi chú vào tài khoản Google trên server.
+- Để sử dụng Client ID riêng từ [Google Cloud Console](https://console.cloud.google.com/):
+  1. Tạo OAuth 2.0 Client ID (loại Web application).
+  2. Thêm Authorized JavaScript origins: `http://localhost:4173` (hoặc domain production của bạn).
+  3. Mở mục **Hồ sơ cá nhân** trong ứng dụng → mở rộng phần **Cấu hình Google OAuth Client ID** → Dán Client ID và nhấn **Lưu Client ID**.
+- Ngoài ra, có sẵn nút **Đăng nhập thử nghiệm (Demo)** để kiểm tra nhanh luồng đăng nhập và đồng bộ mà không cần cấu hình trước.
 
 Để app Capacitor gọi cùng backend, đặt URL API có thể truy cập được trước khi build (HTTPS khi chạy production):
 
