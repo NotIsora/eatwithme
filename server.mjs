@@ -134,6 +134,38 @@ async function handleApi(request, response, pathname) {
     });
     return true;
   }
+  if (pathname === "/api/v1/tags/check" && request.method === "GET") {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const raw = (url.searchParams.get("tag") || "").trim().toLowerCase();
+    const tag = raw.startsWith("@") ? raw : `@${raw}`;
+    const myId = userIdFrom(request);
+    const store = await readStore();
+    const tags = store.tags || {};
+    const taken = Boolean(tags[tag] && tags[tag] !== myId);
+    sendJson(response, 200, { ok: true, tag, available: !taken });
+    return true;
+  }
+  if (pathname === "/api/v1/tags/claim" && request.method === "PUT") {
+    const body = await readJson(request);
+    const raw = String(body.tag || "").trim().toLowerCase();
+    const tag = raw.startsWith("@") ? raw : `@${raw}`;
+    const myId = userIdFrom(request);
+    const store = await readStore();
+    const tags = store.tags || {};
+    if (tags[tag] && tags[tag] !== myId) {
+      sendJson(response, 409, { ok: false, error: `Tag ${tag} đã có người sử dụng`, available: false });
+      return true;
+    }
+    await queueStoreUpdate((nextStore) => {
+      nextStore.tags = nextStore.tags || {};
+      for (const [t, u] of Object.entries(nextStore.tags)) {
+        if (u === myId) delete nextStore.tags[t];
+      }
+      nextStore.tags[tag] = myId;
+    });
+    sendJson(response, 200, { ok: true, tag, available: true });
+    return true;
+  }
   if (pathname !== "/api/v1/state" || !["GET", "PUT"].includes(request.method)) return false;
 
   const userId = userIdFrom(request);
