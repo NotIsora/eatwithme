@@ -166,6 +166,78 @@ async function handleApi(request, response, pathname) {
     sendJson(response, 200, { ok: true, tag, available: true });
     return true;
   }
+  if (pathname === "/api/v1/users/search" && request.method === "GET") {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const raw = (url.searchParams.get("tag") || "").trim().toLowerCase();
+    const tag = raw.startsWith("@") ? raw : `@${raw}`;
+    const store = await readStore();
+    const profiles = store.user_profiles || {};
+    
+    // Find profile by tag
+    let matched = null;
+    for (const [id, prof] of Object.entries(profiles)) {
+      if (prof.tag && prof.tag.toLowerCase() === tag) {
+        matched = { id, ...prof };
+        break;
+      }
+    }
+
+    if (matched) {
+      sendJson(response, 200, { ok: true, user: matched });
+    } else {
+      sendJson(response, 404, { ok: false, error: `Không tìm thấy người dùng có tag ${tag}` });
+    }
+    return true;
+  }
+  if (pathname === "/api/v1/users/profile" && request.method === "POST") {
+    const body = await readJson(request);
+    const myId = userIdFrom(request);
+    const name = String(body.name || "Eat with me").trim();
+    const rawTag = String(body.tag || "").trim().toLowerCase();
+    const tag = rawTag.startsWith("@") ? rawTag : `@${rawTag}`;
+    const email = body.email || null;
+    const picture = body.picture || null;
+
+    const store = await readStore();
+    const profiles = store.user_profiles || {};
+
+    // Check tag conflict
+    for (const [id, prof] of Object.entries(profiles)) {
+      if (id !== myId && prof.tag && prof.tag.toLowerCase() === tag) {
+        sendJson(response, 409, { ok: false, error: `Tag ${tag} đã có người sử dụng` });
+        return true;
+      }
+    }
+
+    const updatedProfile = {
+      id: myId,
+      name,
+      tag,
+      email,
+      picture,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await queueStoreUpdate((nextStore) => {
+      nextStore.user_profiles = nextStore.user_profiles || {};
+      nextStore.user_profiles[myId] = updatedProfile;
+      nextStore.tags = nextStore.tags || {};
+      for (const [t, u] of Object.entries(nextStore.tags)) {
+        if (u === myId) delete nextStore.tags[t];
+      }
+      nextStore.tags[tag] = myId;
+    });
+
+    sendJson(response, 200, { ok: true, user: updatedProfile });
+    return true;
+  }
+  if (pathname === "/api/v1/users" && request.method === "GET") {
+    const store = await readStore();
+    const profiles = store.user_profiles || {};
+    const list = Object.values(profiles).map(({ id, name, tag, picture, updatedAt }) => ({ id, name, tag, picture, updatedAt }));
+    sendJson(response, 200, { ok: true, users: list, count: list.length });
+    return true;
+  }
   if (pathname !== "/api/v1/state" || !["GET", "PUT"].includes(request.method)) return false;
 
   const userId = userIdFrom(request);
