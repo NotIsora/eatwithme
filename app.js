@@ -160,7 +160,7 @@ const locationStorageKey = "eatwithme.location.v1";
 const backendUserKey = "eatwithme.backend-user.v1";
 const googleUserKey = "eatwithme.google_user.v1";
 const googleClientIdKey = "eatwithme.google_client_id.v1";
-const DEFAULT_GOOGLE_CLIENT_ID = "1048684942971-demoappclientideatwithme.apps.googleusercontent.com";
+const DEFAULT_GOOGLE_CLIENT_ID = "349760544060-qmj5okegmg2i47dvsfs0msgv5nug099p.apps.googleusercontent.com";
 
 const backend = {
   baseUrl: null,
