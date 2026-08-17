@@ -150,6 +150,59 @@ const defaultFriends = [
 
 let friends = readStorage(friendsStorageKey, defaultFriends);
 
+const claimedTagsKey = "eatwithme.claimed_tags.v1";
+const defaultClaimedTags = {
+  "@maianh.foodie": "mai",
+  "@quanle.hanoi": "quan",
+  "@linh.foodlover": "linh",
+  "@minhpham.eat": "minh",
+  "@andoanthien08": "current_user",
+};
+
+function getClaimedTags() {
+  return readStorage(claimedTagsKey, defaultClaimedTags);
+}
+
+function normalizeTag(tag) {
+  if (!tag) return "";
+  let clean = String(tag).trim().toLowerCase();
+  if (!clean.startsWith("@")) clean = `@${clean}`;
+  return clean;
+}
+
+function validateTagFormat(tag) {
+  const norm = normalizeTag(tag);
+  if (!norm || norm === "@") return { valid: false, message: "Vui lòng nhập @tag" };
+  const handle = norm.slice(1);
+  if (handle.length < 3) return { valid: false, message: "Tag phải có ít nhất 3 ký tự (sau dấu @)" };
+  if (handle.length > 30) return { valid: false, message: "Tag không được dài quá 30 ký tự" };
+  if (!/^[a-z0-9._]+$/.test(handle)) return { valid: false, message: "Tag chỉ được chứa chữ cái (a-z), số, dấu chấm (.) hoặc gạch dưới (_)" };
+  return { valid: true, tag: norm };
+}
+
+function checkTagAvailability(rawTag, currentUserId) {
+  const format = validateTagFormat(rawTag);
+  if (!format.valid) return format;
+
+  const norm = format.tag;
+  const myId = currentUserId || state.user?.id || "current_user";
+
+  // Check against friends
+  for (const f of friends) {
+    if (f.id !== myId && normalizeTag(f.tag) === norm) {
+      return { valid: false, message: `Tag ${norm} đã được sử dụng bởi tài khoản khác!`, taken: true };
+    }
+  }
+
+  // Check against claimed tags registry
+  const claimed = getClaimedTags();
+  if (claimed[norm] && claimed[norm] !== myId) {
+    return { valid: false, message: `Tag ${norm} đã có tài khoản khác đăng ký!`, taken: true };
+  }
+
+  return { valid: true, tag: norm, message: `Tag ${norm} khả dụng và hợp lệ!` };
+}
+
 function getUserTag(user) {
   if (user?.tag) {
     const raw = String(user.tag).trim();
@@ -1791,14 +1844,37 @@ function saveProfileInfo() {
   const nameInput = document.querySelector("#profile-name-input");
   const tagInput = document.querySelector("#profile-tag-input");
   const newName = nameInput?.value.trim() || state.user?.name || "An Đoàn";
-  let newTag = tagInput?.value.trim() || getUserTag(state.user);
-  if (!newTag.startsWith("@")) newTag = `@${newTag}`;
+  const rawTag = tagInput?.value.trim() || getUserTag(state.user);
+
+  const myId = state.user?.id || "current_user";
+  const check = checkTagAvailability(rawTag, myId);
+
+  if (!check.valid) {
+    showToast(check.message, "error");
+    tagInput?.focus();
+    const statusEl = document.querySelector("#tag-validation-status");
+    if (statusEl) {
+      statusEl.innerHTML = `<span style="color:#d33d2a;font-weight:700;">✕ ${escapeHtml(check.message)}</span>`;
+    }
+    return;
+  }
+
+  const finalTag = check.tag;
+
+  // Release old tag in registry if changed
+  const oldTag = normalizeTag(state.user?.tag || "");
+  const claimed = getClaimedTags();
+  if (oldTag && oldTag !== finalTag && claimed[oldTag] === myId) {
+    delete claimed[oldTag];
+  }
+  claimed[finalTag] = myId;
+  saveStorage(claimedTagsKey, claimed);
 
   state.user = {
     ...(state.user || {}),
-    id: state.user?.id || `user-${Date.now()}`,
+    id: myId,
     name: newName,
-    tag: newTag,
+    tag: finalTag,
     email: state.user?.email || "andoanthien08@gmail.com",
     picture: state.user?.picture || null,
   };
@@ -1807,7 +1883,7 @@ function saveProfileInfo() {
   saveLocalState();
   state.modal = null;
   renderApp();
-  showToast(`Đã lưu tag cá nhân: ${newTag}!`, "success");
+  showToast(`Đã lưu tag độc nhất: ${finalTag}!`, "success");
 }
 
 function renderProfileModal() {
@@ -1847,10 +1923,11 @@ function renderProfileModal() {
             </div>
             <div class="form-group" style="margin-bottom:10px;">
               <label for="profile-tag-input" style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;">
-                <span>Tag cá nhân (@tag)</span>
-                <span style="font-size:11px;color:var(--coral);font-weight:700;">Tag kết bạn</span>
+                <span>Tag cá nhân (@tag độc nhất)</span>
+                <span style="font-size:11px;color:var(--coral);font-weight:700;">Không trùng lặp</span>
               </label>
-              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(myTag)}" placeholder="@andoanthien08" />
+              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(myTag)}" placeholder="@andoanthien08" autocomplete="off" />
+              <div id="tag-validation-status" style="margin-top:4px;font-size:11px;min-height:16px;"></div>
             </div>
             <button type="button" class="primary-button" data-action="save-profile-info" style="width:100%;padding:9px;font-size:12.5px;justify-content:center;">
               Lưu thay đổi @tag & Tên
@@ -2180,6 +2257,26 @@ function bindModalEvents() {
       renderApp();
     }
   });
+
+  const tagInput = document.querySelector("#profile-tag-input");
+  const statusEl = document.querySelector("#tag-validation-status");
+  if (tagInput && statusEl) {
+    const onTagChange = () => {
+      const val = tagInput.value.trim();
+      if (!val) {
+        statusEl.innerHTML = "";
+        return;
+      }
+      const myId = state.user?.id || "current_user";
+      const check = checkTagAvailability(val, myId);
+      if (!check.valid) {
+        statusEl.innerHTML = `<span style="color:#d33d2a;font-weight:600;display:inline-flex;align-items:center;gap:4px;">✕ ${escapeHtml(check.message)}</span>`;
+      } else {
+        statusEl.innerHTML = `<span style="color:var(--herb);font-weight:700;display:inline-flex;align-items:center;gap:4px;">✓ ${escapeHtml(check.message)}</span>`;
+      }
+    };
+    tagInput.addEventListener("input", onTagChange);
+  }
 }
 
 function handleAction(event) {
