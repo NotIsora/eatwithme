@@ -532,12 +532,77 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 
 .friends-layout { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 18px; }
 .friend-list-large { display: grid; gap: 12px; }
-.person-row { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.58); }
+.person-row { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.58); transition: transform .18s, border-color .18s, box-shadow .18s; }
+.person-row:hover { border-color: #e7b6a6; box-shadow: 0 6px 16px rgba(56,38,23,.06); transform: translateY(-1px); }
 .person-row .avatar { width: 43px; height: 43px; font-size: 14px; }
 .person-copy { flex: 1; min-width: 0; }
-.person-copy strong { display: block; }
-.person-copy span { color: var(--ink-muted); font-size: 12px; }
+.person-copy strong { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.person-copy span { color: var(--ink-muted); font-size: 12px; display: block; margin-top: 2px; }
 .person-row .secondary-button { padding: 8px 12px; font-size: 12px; }
+
+/* Instagram-like User Handle & Friends Tag System */
+.profile-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--coral-dark);
+  letter-spacing: 0.01em;
+}
+.profile-handle::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--herb);
+  margin-right: 2px;
+}
+.my-tag-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,248,242,0.98));
+  border: 1.5px solid #f1cfb7;
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(229,93,66,0.06);
+}
+.my-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff0eb;
+  color: var(--coral-dark);
+  border: 1px solid #f7c7b8;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.friend-tag-badge {
+  display: inline-block;
+  color: var(--coral-dark);
+  font-weight: 700;
+  font-size: 11.5px;
+  background: rgba(229,93,66,0.09);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.add-friend-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.add-friend-bar input {
+  flex: 1;
+}
+
 .invite-card { color: white; background: var(--coral); border-radius: 20px; padding: 22px; position: sticky; top: 28px; overflow: hidden; }
 .invite-card::after { content: '♡'; position: absolute; right: -10px; bottom: -25px; font: 120px Fraunces, Georgia, serif; color: rgba(255,255,255,.16); }
 .invite-card h3 { font: 600 25px/1.12 Fraunces, Georgia, serif; max-width: 190px; }
