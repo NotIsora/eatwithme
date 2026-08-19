@@ -151,7 +151,8 @@ const state = {
   query: "",
   user: readStorage(googleUserKey, null),
   saved: readStorage(storageKey, initialSaved),
-  savedFilter: "all",
+  categoryFilter: "all",
+  priceFilter: "all",
   modal: null,
   toastTimer: null,
   installAvailable: false,
@@ -428,7 +429,12 @@ function priceBadge(priceText) {
   return `<span class="food-badge-pill" style="background:${meta.bg};color:${meta.color};">${escapeHtml(meta.name)}</span>`;
 }
 
+function trashIconSvg() {
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+}
+
 function placeCard(place, { compact = false } = {}) {
+  const saved = isSaved(place.id);
   return `
     <article class="place-card ${compact ? "compact" : ""}" data-place-id="${place.id}">
       ${placePhoto(place)}
@@ -443,7 +449,9 @@ function placeCard(place, { compact = false } = {}) {
         ${statusLabel(place)}
       </div>
       <div class="place-actions">
-        <button class="round-button ${isSaved(place.id) ? "saved" : ""}" data-action="toggle-save" data-place-id="${place.id}" aria-label="${isSaved(place.id) ? "Bỏ lưu" : "Lưu"} ${escapeHtml(place.name)}">${icon(isSaved(place.id) ? "bookmarkFill" : "bookmark")}</button>
+        <button class="round-button ${saved ? "saved delete-btn" : ""}" data-action="toggle-save" data-place-id="${place.id}" title="${saved ? "Xóa khỏi danh sách" : "Lưu quán"}" aria-label="${saved ? "Xóa" : "Lưu"} ${escapeHtml(place.name)}">
+          ${saved ? trashIconSvg() : icon("bookmark")}
+        </button>
         <button class="round-button" data-action="share-place" data-place-id="${place.id}" aria-label="Chia sẻ ${escapeHtml(place.name)}">${icon("share")}</button>
       </div>
     </article>`;
@@ -589,10 +597,13 @@ function renderExplore() {
 function renderSaved() {
   const savedPlaces = places.filter((place) => isSaved(place.id));
   let filtered = savedPlaces;
-  if (state.savedFilter === "open") {
-    filtered = savedPlaces.filter((place) => place.status === "open");
-  } else if (state.savedFilter === "custom") {
-    filtered = savedPlaces.filter((place) => place.isCustom);
+
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    filtered = filtered.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+
+  if (state.priceFilter && state.priceFilter !== "all") {
+    filtered = filtered.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
   }
 
   return `
@@ -604,26 +615,66 @@ function renderSaved() {
       </div>
       <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
     </div>
-    <div class="filter-row">
-      <button class="filter ${state.savedFilter === "all" ? "active" : ""}" data-action="saved-filter" data-filter="all">Tất cả (${savedPlaces.length})</button>
-      <button class="filter ${state.savedFilter === "open" ? "active" : ""}" data-action="saved-filter" data-filter="open">Đang mở</button>
-      <button class="filter ${state.savedFilter === "custom" ? "active" : ""}" data-action="saved-filter" data-filter="custom">Tự thêm</button>
+
+    <!-- Bộ lọc Loại món ăn & Mức giá -->
+    <div class="saved-filter-container">
+      <div class="filter-section">
+        <span class="filter-section-title">Loại món:</span>
+        <div class="filter-pills-scroll">
+          <button class="filter-pill ${state.categoryFilter === "all" ? "active" : ""}" data-action="filter-category" data-category="all">
+            Tất cả món (${savedPlaces.length})
+          </button>
+          ${FOOD_CATEGORIES.map((cat) => {
+            const count = savedPlaces.filter((p) => (p.category || "").toLowerCase() === cat.name.toLowerCase()).length;
+            return `<button class="filter-pill ${state.categoryFilter === cat.name ? "active" : ""}" data-action="filter-category" data-category="${escapeHtml(cat.name)}" style="${state.categoryFilter === cat.name ? `background:${cat.bg};color:${cat.color};border-color:${cat.color};font-weight:700;` : ""}">
+              ${escapeHtml(cat.name)}${count > 0 ? ` (${count})` : ""}
+            </button>`;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-section-title">Mức giá:</span>
+        <div class="filter-pills-scroll">
+          <button class="filter-pill ${state.priceFilter === "all" ? "active" : ""}" data-action="filter-price" data-price="all">
+            Tất cả giá
+          </button>
+          ${PRICE_TIERS.map((tier) => {
+            const count = savedPlaces.filter((p) => (p.price || "").toLowerCase() === tier.name.toLowerCase()).length;
+            return `<button class="filter-pill ${state.priceFilter === tier.name ? "active" : ""}" data-action="filter-price" data-price="${escapeHtml(tier.name)}" style="${state.priceFilter === tier.name ? `background:${tier.bg};color:${tier.color};border-color:${tier.color};font-weight:700;` : ""}">
+              ${escapeHtml(tier.name)}${count > 0 ? ` (${count})` : ""}
+            </button>`;
+          }).join("")}
+        </div>
+      </div>
     </div>
+
     <section class="panel">
       <div class="panel-header">
         <div>
           <h2>Danh sách quán ăn</h2>
-          <p>${filtered.length} địa điểm đã lưu</p>
+          <p>${filtered.length} địa điểm hiển thị ${state.categoryFilter !== "all" || state.priceFilter !== "all" ? `(đã lọc)` : ""}</p>
         </div>
+        ${state.categoryFilter !== "all" || state.priceFilter !== "all" ? `<button class="text-button" data-action="reset-saved-filters" style="font-size:12px;color:var(--coral);">Xóa bộ lọc</button>` : ""}
       </div>
       ${
         filtered.length
           ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>`
-          : `
+          : savedPlaces.length === 0
+          ? `
           <div class="empty-state">
             <div class="empty-mark">♨</div>
             <h3>Danh sách đang trống</h3>
             <p>Hãy lưu địa điểm từ màn hình Khám phá hoặc bấm nút "Thêm quán mới" ở góc trên để tự thêm quán bạn yêu thích.</p>
+          </div>`
+          : `
+          <div class="empty-state">
+            <div class="empty-mark">⌕</div>
+            <h3>Không có quán phù hợp bộ lọc</h3>
+            <p>Không tìm thấy quán đã lưu nào phù hợp với tùy chọn lọc hiện tại.</p>
+            <button class="secondary-button" data-action="reset-saved-filters" style="margin-top:12px;margin-inline:auto;">
+              Đặt lại tất cả bộ lọc
+            </button>
           </div>`
       }
     </section>
@@ -1737,7 +1788,9 @@ function renderPlaceModal(placeId) {
           <p class="muted" style="font-size:13px">${escapeHtml(place.description)}</p>
           <div class="modal-footer">
             <button class="secondary-button" data-action="share-place" data-place-id="${place.id}">${icon("share")} Chia sẻ</button>
-            <button class="primary-button" data-action="toggle-save" data-place-id="${place.id}">${isSaved(place.id) ? `${icon("bookmarkFill")} Đã lưu` : `${icon("bookmark")} Lưu quán`}</button>
+            <button class="${isSaved(place.id) ? "secondary-button" : "primary-button"}" data-action="toggle-save" data-place-id="${place.id}" style="${isSaved(place.id) ? "color:#c53030;border-color:#fca5a5;" : ""}">
+              ${isSaved(place.id) ? `${trashIconSvg()} Xóa khỏi danh sách` : `${icon("bookmark")} Lưu quán này`}
+            </button>
           </div>
         </div>
       </article>
@@ -1919,7 +1972,9 @@ function handleAction(event) {
     case "native-share-place": nativeSharePlace(target.dataset.placeId); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "close-modal": state.modal = null; renderModal(); break;
-    case "saved-filter": state.savedFilter = target.dataset.filter; renderApp(); break;
+    case "filter-category": state.categoryFilter = target.dataset.category; renderApp(); break;
+    case "filter-price": state.priceFilter = target.dataset.price; renderApp(); break;
+    case "reset-saved-filters": state.categoryFilter = "all"; state.priceFilter = "all"; renderApp(); break;
     case "trigger-google-login": triggerGooglePrompt(); break;
     case "demo-google-login": loginDemoGoogleUser(); break;
     case "logout-user": logoutUser(); break;
