@@ -130,7 +130,15 @@ const defaultPlaces = [
   },
 ];
 
-const places = defaultPlaces;
+const customPlacesKey = "eatwithme.custom_places.v1";
+let customPlaces = readStorage(customPlacesKey, []);
+let places = [...customPlaces, ...defaultPlaces];
+
+function refreshPlaces() {
+  customPlaces = readStorage(customPlacesKey, []);
+  places = [...customPlaces, ...defaultPlaces];
+}
+
 const initialSaved = [defaultPlaces[0].id, defaultPlaces[1].id];
 const storageKey = "eatwithme.saved.v1";
 const locationStorageKey = "eatwithme.location.v1";
@@ -307,6 +315,7 @@ function exportBackupData() {
     exportedAt: new Date().toISOString(),
     user: state.user,
     saved: state.saved,
+    customPlaces: readStorage(customPlacesKey, []),
   };
 
   const jsonStr = JSON.stringify(data, null, 2);
@@ -337,6 +346,11 @@ function importBackupFile(file) {
       if (Array.isArray(data.saved)) {
         state.saved = data.saved;
         saveStorage(storageKey, state.saved);
+      }
+
+      if (Array.isArray(data.customPlaces)) {
+        saveStorage(customPlacesKey, data.customPlaces);
+        refreshPlaces();
       }
 
       if (data.user && typeof data.user === "object") {
@@ -519,15 +533,18 @@ function renderHero() {
         <div class="eyebrow">Hôm nay ăn gì?</div>
         <h1>Đi tìm một nơi<br /><em>đáng nhớ.</em></h1>
         <p>Gom những quán bạn yêu, những món bạn muốn thử và những hương vị tuyệt vời nhất.</p>
-        <div class="hero-actions"><button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button><button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu (${state.saved.length})</button></div>
+        <div class="hero-actions">
+          <button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button>
+          <button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu (${state.saved.length})</button>
+        </div>
       </div>
       <div class="hero-aside">
         <div class="eyebrow">Bản đồ ẩm thực cá nhân</div>
         <h3>Lưu lại từng quán ăn bạn yêu thích.</h3>
-        <p>Đã lưu ${state.saved.length} quán ăn. Dữ liệu được bảo vệ an toàn trên thiết bị của bạn.</p>
+        <p>Đã lưu ${state.saved.length} quán ăn. Bạn có thể tự ghim thêm địa điểm vào kho ẩm thực.</p>
         <div style="display:flex;gap:8px;margin-top:14px;">
-          <button class="secondary-button" data-action="navigate" data-view="saved" style="font-size:12.5px;padding:8px 14px;">
-            ${icon("bookmark")} Xem quán đã lưu
+          <button class="secondary-button" data-action="open-add-place" style="font-size:12.5px;padding:8px 14px;">
+            ${icon("add")} Thêm quán mới
           </button>
         </div>
       </div>
@@ -546,6 +563,7 @@ function renderMap() {
       <div class="map-toolbar">
         <button class="map-chip active" data-action="fit-saved" aria-label="Xem các quán đã lưu">Đã lưu · ${savedCount}</button>
         <button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button>
+        <button class="map-chip" data-action="open-add-place" style="font-weight:700;color:var(--coral)">${icon("add")} Thêm quán</button>
         <button class="map-chip" data-action="switch-city" data-city="hanoi">Hà Nội</button>
         <button class="map-chip" data-action="switch-city" data-city="hcm">TP. HCM</button>
         <button class="map-chip" data-action="switch-city" data-city="danang">Đà Nẵng</button>
@@ -561,7 +579,7 @@ function renderSearchPanel() {
   const query = state.query.trim().toLowerCase();
   if (!query) return "";
   const results = places.filter((place) => `${place.name} ${place.category} ${place.address}`.toLowerCase().includes(query));
-  return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>Thử tìm theo tên quận, loại món như "Bún chả", "Pizza", "Cafe"...</p></div>`}</section>`;
+  return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>Bạn có thể bấm nút "Thêm quán" để tự ghim địa điểm này lên bản đồ.</p><button class="primary-button" data-action="open-add-place" style="margin-top:10px">${icon("add")} Thêm quán ngay</button></div>`}</section>`;
 }
 
 function renderExplore() {
@@ -573,18 +591,23 @@ function renderSaved() {
   let filtered = savedPlaces;
   if (state.savedFilter === "open") {
     filtered = savedPlaces.filter((place) => place.status === "open");
+  } else if (state.savedFilter === "custom") {
+    filtered = savedPlaces.filter((place) => place.isCustom);
   }
+
   return `
     <div class="page-title-row">
       <div>
         <div class="eyebrow">Kho lưu trữ ẩm thực</div>
         <h1>Quán đã lưu</h1>
-        <p>Những quán ăn bạn đã lưu lại để ghé thăm và thưởng thức.</p>
+        <p>Những quán bạn muốn quay lại, lưu trữ riêng hoặc tự thêm bằng tay.</p>
       </div>
+      <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
     </div>
     <div class="filter-row">
       <button class="filter ${state.savedFilter === "all" ? "active" : ""}" data-action="saved-filter" data-filter="all">Tất cả (${savedPlaces.length})</button>
       <button class="filter ${state.savedFilter === "open" ? "active" : ""}" data-action="saved-filter" data-filter="open">Đang mở</button>
+      <button class="filter ${state.savedFilter === "custom" ? "active" : ""}" data-action="saved-filter" data-filter="custom">Tự thêm</button>
     </div>
     <section class="panel">
       <div class="panel-header">
@@ -592,8 +615,21 @@ function renderSaved() {
           <h2>Danh sách quán ăn</h2>
           <p>${filtered.length} địa điểm đã lưu</p>
         </div>
+        <button class="text-button" data-action="open-add-place">+ Thêm địa điểm</button>
       </div>
-      ${filtered.length ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">♨</div><h3>Danh sách đang trống</h3><p>Hãy lưu địa điểm từ màn hình Khám phá bằng cách bấm biểu tượng trái tim.</p><button class="primary-button" data-action="navigate" data-view="explore" style="margin-top:14px">${icon("compass")} Khám phá ngay</button></div>`}
+      ${
+        filtered.length
+          ? `<div class="place-list">${filtered.map((place) => placeCard(place)).join("")}</div>`
+          : `
+          <div class="empty-state">
+            <div class="empty-mark">♨</div>
+            <h3>Danh sách đang trống</h3>
+            <p>Hãy lưu địa điểm từ màn hình Khám phá hoặc tự thêm quán ăn bạn yêu thích.</p>
+            <button class="primary-button" data-action="open-add-place" style="margin-top:14px">
+              ${icon("add")} Thêm quán ăn
+            </button>
+          </div>`
+      }
     </section>
 
     <section class="panel" style="margin-top:16px;background:rgba(255,255,255,0.48);border:1px dashed var(--line);padding:15px 18px;">
@@ -603,7 +639,7 @@ function renderSaved() {
             <span>💾</span> Quản lý dữ liệu lưu trên máy
           </h3>
           <p style="font-size:12px;color:var(--ink-muted);margin:0;">
-            Đã lưu ${state.saved.length} quán ăn · Bộ nhớ máy được bảo vệ chống xóa ngầm
+            Đã lưu ${state.saved.length} quán ăn (${customPlaces.length} quán tự thêm) · Bộ nhớ máy được bảo vệ chống xóa ngầm
           </p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1495,11 +1531,187 @@ function renderProfileModal() {
     </div>`;
 }
 
+function renderAddPlaceModal() {
+  const currentCoords = mapState.userPosition || DEFAULT_MAP_CENTER;
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Thêm quán ăn mới" data-modal-card style="max-width:480px;">
+        <div class="modal-content">
+          <div class="eyebrow">Thêm địa điểm vào kho ẩm thực</div>
+          <h2>Thêm quán ăn mới</h2>
+          <p class="muted">Chọn dạng đồ ăn và mức giá phù hợp để ghim lên bản đồ.</p>
+
+          <form id="add-place-form" onsubmit="event.preventDefault();" style="display:grid;gap:13px;margin-top:14px;">
+            <div class="form-group">
+              <label for="new-place-name">Tên quán ăn / Địa điểm <span style="color:var(--coral)">*</span></label>
+              <input id="new-place-name" class="form-input" type="text" placeholder="Ví dụ: Phở Bát Đàn, Sushi Kei, Pizza 4P's..." required autofocus />
+            </div>
+
+            <div class="picker-section">
+              <div class="picker-label-row">
+                <label>Dạng đồ ăn <span style="color:var(--coral)">*</span></label>
+                <span id="selected-category-badge" class="picker-label-badge">Đang chọn: <strong>Món Việt</strong></span>
+              </div>
+              <input id="new-place-category" type="hidden" value="Món Việt" />
+              <div class="category-pill-grid">
+                ${FOOD_CATEGORIES.map((cat, idx) => `
+                  <button type="button" class="food-select-pill ${idx === 4 ? "selected" : ""}" data-action="pick-food-category" data-val="${cat.name}" style="background:${cat.bg};color:${cat.color};${cat.border ? `border:1px solid ${cat.border};` : ""}">
+                    ${escapeHtml(cat.name)}
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+
+            <div class="picker-section">
+              <div class="picker-label-row">
+                <label>Mức giá tiền <span style="color:var(--coral)">*</span></label>
+                <span id="selected-price-badge" class="picker-label-badge">Đang chọn: <strong>&lt;100k</strong></span>
+              </div>
+              <input id="new-place-price" type="hidden" value="<100k" />
+              <div class="price-pill-grid">
+                ${PRICE_TIERS.map((tier, idx) => `
+                  <button type="button" class="food-select-pill ${idx === 0 ? "selected" : ""}" data-action="pick-price-tier" data-val="${tier.name}" style="background:${tier.bg};color:${tier.color};">
+                    ${escapeHtml(tier.name)}
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-place-address">Địa chỉ / Khu vực</label>
+              <input id="new-place-address" class="form-input" type="text" placeholder="Ví dụ: 49 Bát Đàn, Hoàn Kiếm, Hà Nội" />
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group">
+                <label for="new-place-hours">Giờ mở cửa</label>
+                <input id="new-place-hours" class="form-input" type="text" value="07:00 – 22:00" placeholder="07:00 – 22:00" />
+              </div>
+              <div class="form-group">
+                <label for="new-place-rating">Đánh giá sao</label>
+                <input id="new-place-rating" class="form-input" type="text" value="5.0" placeholder="5.0" />
+              </div>
+            </div>
+
+            <div class="form-group" style="padding:10px;background:var(--paper-soft);border-radius:12px;border:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:12px;font-weight:700;color:var(--ink);">Tọa độ ghim trên bản đồ</span>
+                <button type="button" class="text-button" data-action="use-my-location" style="font-size:11px;">
+                  ${icon("compass")} Vị trí hiện tại
+                </button>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <input id="new-place-lat" class="form-input" type="number" step="0.0001" value="${currentCoords[0]}" placeholder="Vĩ độ (Lat)" />
+                <input id="new-place-lng" class="form-input" type="number" step="0.0001" value="${currentCoords[1]}" placeholder="Kinh độ (Lng)" />
+              </div>
+            </div>
+
+            <div class="modal-footer" style="margin-top:10px;">
+              <button type="button" class="secondary-button" data-action="close-modal">Hủy</button>
+              <button type="button" class="primary-button" data-action="submit-new-place">
+                ${icon("check")} Lưu quán ăn
+              </button>
+            </div>
+          </form>
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+function submitNewPlace() {
+  const nameInput = document.querySelector("#new-place-name");
+  const categoryInput = document.querySelector("#new-place-category");
+  const addressInput = document.querySelector("#new-place-address");
+  const priceInput = document.querySelector("#new-place-price");
+  const hoursInput = document.querySelector("#new-place-hours");
+  const ratingInput = document.querySelector("#new-place-rating");
+  const latInput = document.querySelector("#new-place-lat");
+  const lngInput = document.querySelector("#new-place-lng");
+
+  const name = nameInput?.value.trim();
+  if (!name) {
+    showToast("Vui lòng nhập tên quán ăn", "error");
+    nameInput?.focus();
+    return;
+  }
+
+  const category = categoryInput?.value.trim() || "Món Việt";
+  const address = addressInput?.value.trim() || "Khu vực của bạn";
+  const price = priceInput?.value.trim() || "<100k";
+  const hours = hoursInput?.value.trim() || "07:00 – 22:00";
+  const rating = ratingInput?.value.trim() || "5.0";
+
+  let lat = parseFloat(latInput?.value);
+  let lng = parseFloat(lngInput?.value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    const fallback = mapState.userPosition || DEFAULT_MAP_CENTER;
+    lat = fallback[0];
+    lng = fallback[1];
+  }
+
+  const lowerCat = category.toLowerCase();
+  let color = "bun";
+  if (lowerCat.includes("cafe") || lowerCat.includes("bánh") || lowerCat.includes("ice cream")) color = "cafe";
+  else if (lowerCat.includes("pizza") || lowerCat.includes("món âu") || lowerCat.includes("dining")) color = "taco";
+  else if (lowerCat.includes("bún") || lowerCat.includes("phở") || lowerCat.includes("món việt")) color = "bun";
+  else if (lowerCat.includes("nướng") || lowerCat.includes("lẩu") || lowerCat.includes("grill") || lowerCat.includes("hotpot")) color = "taco";
+  else if (lowerCat.includes("món nhật") || lowerCat.includes("món hàn") || lowerCat.includes("món trung")) color = "pho";
+
+  const newPlace = {
+    id: `custom-${Date.now()}`,
+    name,
+    category,
+    price,
+    address,
+    distance: "Vừa thêm",
+    status: "open",
+    closes: hours.includes("–") ? hours.split("–")[1].trim() : "22:00",
+    rating,
+    color,
+    pin: "coral",
+    lat,
+    lng,
+    description: `Quán ${name} (${category} · ${price}) do bạn lưu vào danh sách.`,
+    hours,
+    isCustom: true,
+  };
+
+  const existingCustom = readStorage(customPlacesKey, []);
+  existingCustom.unshift(newPlace);
+  saveStorage(customPlacesKey, existingCustom);
+
+  places = [newPlace, ...places.filter((p) => p.id !== newPlace.id)];
+
+  if (!state.saved.includes(newPlace.id)) {
+    state.saved.unshift(newPlace.id);
+  }
+
+  saveLocalState();
+
+  state.modal = null;
+  renderModal();
+
+  if (mapState.instance && window.L) {
+    const iconForSaved = savedMarkerIcon(window.L);
+    const marker = window.L.marker([newPlace.lat, newPlace.lng], { icon: iconForSaved })
+      .addTo(mapState.instance)
+      .bindPopup(mapPopupHtml(newPlace), { maxWidth: 230 });
+    mapState.savedMarkers.set(newPlace.id, marker);
+    mapState.instance.setView([newPlace.lat, newPlace.lng], MAP_LOCATE_ZOOM, { animate: true });
+    marker.openPopup();
+  }
+
+  showToast(`Đã thêm quán “${name}” (${category} · ${price})!`, "success");
+  renderApp();
+}
+
 function renderModal() {
   const root = document.querySelector("#modal-root");
   if (!state.modal) { root.innerHTML = ""; return; }
   if (state.modal.type === "place") root.innerHTML = renderPlaceModal(state.modal.placeId);
   if (state.modal.type === "share") root.innerHTML = renderShareModal(state.modal.placeId);
+  if (state.modal.type === "add-place") root.innerHTML = renderAddPlaceModal();
   if (state.modal.type === "profile") {
     root.innerHTML = renderProfileModal();
     tryMountGoogleButton();
@@ -1647,7 +1859,45 @@ function handleAction(event) {
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
+    case "open-add-place": state.modal = { type: "add-place" }; renderModal(); break;
+    case "submit-new-place": submitNewPlace(); break;
     case "export-backup": exportBackupData(); break;
+    case "pick-food-category": {
+      const catInput = document.querySelector("#new-place-category");
+      const badge = document.querySelector("#selected-category-badge");
+      if (catInput) catInput.value = target.dataset.val;
+      if (badge) badge.innerHTML = `Đang chọn: <strong>${escapeHtml(target.dataset.val)}</strong>`;
+      target.parentElement?.querySelectorAll(".food-select-pill").forEach((btn) => btn.classList.remove("selected"));
+      target.classList.add("selected");
+      break;
+    }
+    case "pick-price-tier": {
+      const priceInput = document.querySelector("#new-place-price");
+      const badge = document.querySelector("#selected-price-badge");
+      if (priceInput) priceInput.value = target.dataset.val;
+      if (badge) badge.innerHTML = `Đang chọn: <strong>${escapeHtml(target.dataset.val)}</strong>`;
+      target.parentElement?.querySelectorAll(".food-select-pill").forEach((btn) => btn.classList.remove("selected"));
+      target.classList.add("selected");
+      break;
+    }
+    case "use-my-location": {
+      const latIn = document.querySelector("#new-place-lat");
+      const lngIn = document.querySelector("#new-place-lng");
+      if (mapState.userPosition && latIn && lngIn) {
+        latIn.value = mapState.userPosition[0].toFixed(5);
+        lngIn.value = mapState.userPosition[1].toFixed(5);
+        showToast("Đã lấy tọa độ vị trí hiện tại của bạn", "success");
+      } else {
+        locateDevice().then(() => {
+          if (mapState.userPosition && latIn && lngIn) {
+            latIn.value = mapState.userPosition[0].toFixed(5);
+            lngIn.value = mapState.userPosition[1].toFixed(5);
+            showToast("Đã định vị và cập nhật tọa độ", "success");
+          }
+        });
+      }
+      break;
+    }
     case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
     case "switch-city": {
       const cityKey = target.dataset.city;
