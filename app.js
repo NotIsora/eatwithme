@@ -1,10 +1,7 @@
 const ICONS = {
   compass: "⌖",
   collections: "▦",
-  friends: "♧",
-  inbox: "✉",
   search: "⌕",
-  bell: "◌",
   add: "+",
   share: "↗",
   bookmark: "♡",
@@ -13,6 +10,8 @@ const ICONS = {
   close: "×",
   arrow: "→",
   check: "✓",
+  copy: "📋",
+  mapPin: "📍",
 };
 
 const FOOD_CATEGORIES = [
@@ -58,7 +57,7 @@ const defaultPlaces = [
     rating: "4.6",
     color: "bun",
     pin: "p1",
-    description: "Một bữa trưa gọn gàng, thơm mùi than nướng và luôn đáng để rủ thêm một người bạn.",
+    description: "Một bữa trưa gọn gàng, thơm mùi than nướng và luôn đáng để ghé lại.",
     hours: "10:00 – 22:00",
   },
   {
@@ -140,101 +139,16 @@ function refreshPlaces() {
   places = [...customPlaces, ...defaultPlaces];
 }
 
-const friendsStorageKey = "eatwithme.friends.v2";
-const defaultFriends = [];
-
-// Filter out any legacy mock friends if present in older storage
-let friends = (readStorage(friendsStorageKey, []) || []).filter(
-  (f) => f && !["mai", "quan", "linh", "minh"].includes(f.id)
-);
-
-const claimedTagsKey = "eatwithme.claimed_tags.v2";
-const defaultClaimedTags = {
-  "@eatwithme": "current_user",
-};
-
-function getClaimedTags() {
-  return readStorage(claimedTagsKey, defaultClaimedTags);
-}
-
-function normalizeTag(tag) {
-  if (!tag) return "";
-  let clean = String(tag).trim().toLowerCase();
-  if (!clean.startsWith("@")) clean = `@${clean}`;
-  return clean;
-}
-
-function validateTagFormat(tag) {
-  const norm = normalizeTag(tag);
-  if (!norm || norm === "@") return { valid: false, message: "Vui lòng nhập @tag" };
-  const handle = norm.slice(1);
-  if (handle.length < 3) return { valid: false, message: "Tag phải có ít nhất 3 ký tự (sau dấu @)" };
-  if (handle.length > 30) return { valid: false, message: "Tag không được dài quá 30 ký tự" };
-  if (!/^[a-z0-9._]+$/.test(handle)) return { valid: false, message: "Tag chỉ được chứa chữ cái (a-z), số, dấu chấm (.) hoặc gạch dưới (_)" };
-  return { valid: true, tag: norm };
-}
-
-function checkTagAvailability(rawTag, currentUserId) {
-  const format = validateTagFormat(rawTag);
-  if (!format.valid) return format;
-
-  const norm = format.tag;
-  const myId = currentUserId || state.user?.id || "current_user";
-
-  // Check against friends
-  for (const f of friends) {
-    if (f.id !== myId && normalizeTag(f.tag) === norm) {
-      return { valid: false, message: `Tag ${norm} đã được sử dụng bởi tài khoản khác!`, taken: true };
-    }
-  }
-
-  // Check against claimed tags registry
-  const claimed = getClaimedTags();
-  if (claimed[norm] && claimed[norm] !== myId) {
-    return { valid: false, message: `Tag ${norm} đã có tài khoản khác đăng ký!`, taken: true };
-  }
-
-  return { valid: true, tag: norm, message: `Tag ${norm} khả dụng và hợp lệ!` };
-}
-
-function getUserTag(user) {
-  if (user?.tag) {
-    const raw = String(user.tag).trim();
-    return raw.startsWith("@") ? raw : `@${raw}`;
-  }
-  if (user?.email) {
-    const prefix = user.email.split("@")[0].replace(/[^a-zA-Z0-9._]/g, "").toLowerCase();
-    return `@${prefix}`;
-  }
-  if (user?.name && user.name !== "Eat with me") {
-    const ascii = user.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
-    const clean = ascii.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return `@${clean || "eatwithme"}`;
-  }
-  return "@eatwithme";
-}
-
-const activities = [];
-
 const initialSaved = [defaultPlaces[0].id, defaultPlaces[1].id];
 const storageKey = "eatwithme.saved.v1";
 const notesKey = "eatwithme.notes.v1";
 const locationStorageKey = "eatwithme.location.v1";
-const backendUserKey = "eatwithme.backend-user.v1";
 const googleUserKey = "eatwithme.google_user.v1";
 const googleClientIdKey = "eatwithme.google_client_id.v1";
 const DEFAULT_GOOGLE_CLIENT_ID = "349760544060-qmj5okegmg2i47dvsfs0msgv5nug099p.apps.googleusercontent.com";
 
-const backend = {
-  baseUrl: null,
-  userId: null,
-  available: false,
-  syncTimer: null,
-  warned: false,
-};
-
 const state = {
-  view: "explore",
+  view: "explore", // "explore" | "saved"
   query: "",
   user: readStorage(googleUserKey, null),
   saved: readStorage(storageKey, initialSaved),
@@ -243,136 +157,29 @@ const state = {
   savedFilter: "all",
   modal: null,
   toastTimer: null,
-  selectedShareFriends: new Set(),
   installAvailable: false,
 };
-
-function resolveBackendBaseUrl() {
-  const configured = String(window.EATWITHME_API_BASE || readStorage("eatwithme.api-base.v1", "") || "").trim();
-  if (configured) return configured.replace(/\/+$/, "");
-  // GitHub Pages is a static hosting platform without backend APIs
-  if (typeof window !== "undefined" && window.location?.hostname?.endsWith("github.io")) return null;
-  // Browser/PWA: same-origin API on localhost, custom domains, or Vercel
-  if (/^https?:$/.test(window.location.protocol)) return `${window.location.origin}/api`;
-  return null;
-}
-
-function getBackendUserId() {
-  if (state.user?.id) {
-    const cleanId = String(state.user.id).replace(/[^A-Za-z0-9._-]/g, "").slice(0, 60);
-    return `google-${cleanId}`;
-  }
-  try {
-    const existing = localStorage.getItem(backendUserKey);
-    if (existing && /^[A-Za-z0-9._-]{1,80}$/.test(existing)) return existing;
-    const generated = `device-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
-    localStorage.setItem(backendUserKey, generated);
-    return generated;
-  } catch {
-    return "demo";
-  }
-}
-
-function backendPayload() {
-  return {
-    saved: state.saved,
-    notes: state.notes,
-    customPlaces: readStorage(customPlacesKey, []),
-  };
-}
-
-async function backendRequest(path, options = {}) {
-  if (!backend.baseUrl) throw new Error("Backend URL is not configured");
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 3500);
-  try {
-    const response = await fetch(`${backend.baseUrl}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-EatWithMe-User": backend.userId,
-        ...(options.headers || {}),
-      },
-    });
-    if (!response.ok) throw new Error(`Backend returned ${response.status}`);
-    return response.json();
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
 
 function saveLocalState() {
   saveStorage(storageKey, state.saved);
   saveStorage(notesKey, state.notes);
 }
 
-async function syncBackendState() {
-  if (!backend.available) return;
-  try {
-    await backendRequest("/v1/state", { method: "PUT", body: JSON.stringify({ data: backendPayload() }) });
-  } catch {
-    backend.available = false;
-    if (!backend.warned) {
-      backend.warned = true;
-      showToast("Backend tạm thời không kết nối · vẫn lưu trên thiết bị", "error");
-    }
-  }
-}
-
-function scheduleBackendSync() {
-  if (!backend.available) return;
-  if (backend.syncTimer) window.clearTimeout(backend.syncTimer);
-  backend.syncTimer = window.setTimeout(() => {
-    backend.syncTimer = null;
-    syncBackendState();
-  }, 180);
-}
-
-async function bootstrapBackend() {
-  backend.baseUrl = resolveBackendBaseUrl();
-  backend.userId = getBackendUserId();
-  if (!backend.baseUrl) return;
-  try {
-    const response = await backendRequest("/v1/state");
-    const remote = response?.data;
-    if (response?.exists && remote) {
-      state.saved = Array.isArray(remote.saved) ? remote.saved : state.saved;
-      state.notes = remote.notes && typeof remote.notes === "object" ? remote.notes : state.notes;
-      if (Array.isArray(remote.customPlaces)) {
-        saveStorage(customPlacesKey, remote.customPlaces);
-        refreshPlaces();
-      }
-      saveLocalState();
-    } else {
-      backend.available = true;
-      await syncBackendState();
-      return;
-    }
-    backend.available = true;
-    renderApp();
-  } catch {
-    // Local-first fallback keeps the PWA usable offline and before API deployment.
-    backend.available = false;
-  }
-}
-
 const DEFAULT_MAP_CENTER = [21.0278, 105.8342];
-const MAP_MIN_ZOOM = 11; // Chặn zoom out quá mức (giữ trong phạm vi vùng đô thị)
-const MAP_MAX_ZOOM = 17; // Chặn zoom in quá mức (giữ chi tiết cấp đường phố cân đối)
-const MAP_DEFAULT_ZOOM = 13; // Góc nhìn thành phố mặc định
-const MAP_LOCATE_ZOOM = 15; // Mức zoom khi định vị người dùng
+const MAP_MIN_ZOOM = 11;
+const MAP_MAX_ZOOM = 17;
+const MAP_DEFAULT_ZOOM = 13;
+const MAP_LOCATE_ZOOM = 15;
 const CITIES = {
   hanoi: { name: "Hà Nội", center: [21.0285, 105.8542], zoom: MAP_DEFAULT_ZOOM },
   hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: MAP_DEFAULT_ZOOM },
   danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
 };
-const GPS_HARD_DEADLINE_MS = 1500;
 const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png";
 const MAP_LABEL_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png";
 const MAP_TILE_SUBDOMAINS = ["a", "b", "c", "d"];
 const MAP_TILE_ATTRIBUTION = "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\" target=\"_blank\">CARTO</a>";
+
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
   timeout: 600,
@@ -395,26 +202,26 @@ const NATIVE_PRECISE_LOCATION_OPTIONS = {
 };
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
+
 const mapState = {
   instance: null,
   userMarker: null,
   accuracyCircle: null,
-  activeWatchId: null,
-  userPosition: null,
   savedMarkers: new Map(),
-  leafletPromise: null,
-  hasLocatedUser: false,
-  locationPending: false,
-  isRefining: false,
+  userPosition: readCachedLocation(),
   isPrecise: false,
+  isRefining: false,
   tilesLoaded: false,
   tileCheckTimer: null,
+  leafletPromise: null,
+  locationPending: false,
+  hasLocatedUser: false,
 };
 
 function readStorage(key, fallback) {
   try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return value ?? fallback;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
   }
@@ -422,58 +229,50 @@ function readStorage(key, fallback) {
 
 function readCachedLocation() {
   const cached = readStorage(locationStorageKey, null);
-  if (!cached || !Number.isFinite(cached.lat) || !Number.isFinite(cached.lng) || !Number.isFinite(cached.timestamp)) return null;
-  if (Date.now() - cached.timestamp > MAX_CACHE_AGE_MS) return null;
-  if (cached.lat < -90 || cached.lat > 90 || cached.lng < -180 || cached.lng > 180) return null;
+  if (!cached || !Number.isFinite(cached.lat) || !Number.isFinite(cached.lng)) return null;
+  const age = Date.now() - (cached.timestamp || 0);
+  if (age > MAX_CACHE_AGE_MS) return null;
   return [cached.lat, cached.lng];
 }
 
 function isCachedLocationFresh() {
   const cached = readStorage(locationStorageKey, null);
-  return Boolean(cached && Number.isFinite(cached.timestamp) && (Date.now() - cached.timestamp <= STALE_THRESHOLD_MS));
+  if (!cached) return false;
+  return Boolean(cached.isPrecise) && (Date.now() - (cached.timestamp || 0) < STALE_THRESHOLD_MS);
 }
 
-mapState.userPosition = readCachedLocation();
+// IndexedDB Persistent Storage for Offline Resilience
+const IDB_NAME = "EatWithMeDB";
+const IDB_VERSION = 1;
+const IDB_STORE = "app_state";
 
-// --- LOCAL-FIRST PERSISTENT STORAGE ENGINE ---
-const DB_NAME = "EatWithMeDB";
-const DB_VERSION = 1;
-const DB_STORE = "user_data";
-
-let idbPromise = null;
 function getIndexedDb() {
-  if (idbPromise) return idbPromise;
-  idbPromise = new Promise((resolve) => {
-    if (!window.indexedDB) { resolve(null); return; }
-    try {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(DB_STORE)) {
-          db.createObjectStore(DB_STORE);
-        }
-      };
-      request.onsuccess = (event) => resolve(event.target.result);
-      request.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
+  if (!window.indexedDB) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
   });
-  return idbPromise;
 }
 
 async function idbSet(key, val) {
   try {
     const db = await getIndexedDb();
     if (!db) return;
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(val, key);
     return new Promise((resolve) => {
-      const tx = db.transaction(DB_STORE, "readwrite");
-      tx.objectStore(DB_STORE).put(val, key);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
     });
   } catch {
-    return false;
+    /* fallback to localstorage */
   }
 }
 
@@ -481,10 +280,10 @@ async function idbGet(key) {
   try {
     const db = await getIndexedDb();
     if (!db) return null;
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const req = tx.objectStore(IDB_STORE).get(key);
     return new Promise((resolve) => {
-      const tx = db.transaction(DB_STORE, "readonly");
-      const req = tx.objectStore(DB_STORE).get(key);
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => resolve(null);
     });
   } catch {
@@ -492,7 +291,6 @@ async function idbGet(key) {
   }
 }
 
-// Request persistent storage so browser never auto-clears user places
 async function requestPersistentStorage() {
   if (navigator.storage && navigator.storage.persist) {
     try {
@@ -501,7 +299,7 @@ async function requestPersistentStorage() {
         await navigator.storage.persist();
       }
     } catch {
-      // Ignored if unsupported
+      /* ignore */
     }
   }
 }
@@ -511,172 +309,149 @@ function saveStorage(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     idbSet(key, value);
-  } catch { /* demo mode */ }
+  } catch {}
 }
 
 function exportBackupData() {
-  try {
-    const customList = readStorage(customPlacesKey, []);
-    const backupObj = {
-      app: "EatWithMe",
-      version: "2.0",
-      exportedAt: new Date().toISOString(),
-      placesCount: customList.length,
-      customPlaces: customList,
-      saved: state.saved,
-      notes: state.notes,
-    };
-    const jsonStr = JSON.stringify(backupObj, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const filename = `EatWithMe_Backup_${dateStr}.json`;
+  const data = {
+    version: 2,
+    appName: "EatWithMe",
+    exportedAt: new Date().toISOString(),
+    user: state.user,
+    saved: state.saved,
+    notes: state.notes,
+    customPlaces: readStorage(customPlacesKey, []),
+  };
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showToast(`Đã xuất file sao lưu “${filename}” về máy!`, "success");
-  } catch {
-    showToast("Không thể xuất file sao lưu", "error");
-  }
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `EatWithMe-Backup-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Đã xuất file sao lưu dữ liệu (.json) thành công!", "success");
 }
 
 function importBackupFile(file) {
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (event) => {
+  reader.onload = (e) => {
     try {
-      const content = event.target.result;
-      const data = JSON.parse(content);
-
-      if (!data || typeof data !== "object") {
-        showToast("File sao lưu không hợp lệ", "error");
+      const data = JSON.parse(e.target.result);
+      if (!data || (typeof data !== "object")) {
+        showToast("File sao lưu không đúng định dạng!", "error");
         return;
       }
 
-      const importedPlaces = Array.isArray(data.customPlaces) ? data.customPlaces : [];
-      const importedSaved = Array.isArray(data.saved) ? data.saved : [];
-      const importedNotes = data.notes && typeof data.notes === "object" ? data.notes : {};
-
-      if (importedPlaces.length === 0 && importedSaved.length === 0) {
-        showToast("File sao lưu không chứa dữ liệu quán ăn", "error");
-        return;
+      if (Array.isArray(data.saved)) {
+        state.saved = data.saved;
+        saveStorage(storageKey, state.saved);
       }
 
-      // Merge custom places (avoid duplicates by ID)
-      const currentCustom = readStorage(customPlacesKey, []);
-      const existingIds = new Set(currentCustom.map((p) => p.id));
-      let newCount = 0;
-
-      for (const p of importedPlaces) {
-        if (!existingIds.has(p.id)) {
-          currentCustom.unshift(p);
-          existingIds.add(p.id);
-          newCount++;
-        }
+      if (data.notes && typeof data.notes === "object") {
+        state.notes = data.notes;
+        saveStorage(notesKey, state.notes);
       }
 
-      saveStorage(customPlacesKey, currentCustom);
-      refreshPlaces();
-
-      // Merge saved IDs
-      const savedSet = new Set(state.saved);
-      for (const id of importedSaved) {
-        savedSet.add(id);
+      if (Array.isArray(data.customPlaces)) {
+        saveStorage(customPlacesKey, data.customPlaces);
+        refreshPlaces();
       }
-      state.saved = Array.from(savedSet);
 
-      // Merge notes
-      state.notes = { ...state.notes, ...importedNotes };
+      if (data.user && typeof data.user === "object") {
+        state.user = data.user;
+        saveStorage(googleUserKey, state.user);
+      }
 
       saveLocalState();
-      scheduleBackendSync();
       renderApp();
-
-      showToast(`Đã khôi phục thành công ${newCount} quán từ file!`, "success");
-    } catch {
-      showToast("File sao lưu không hợp lệ hoặc bị lỗi định dạng", "error");
+      showToast("Đã phục hồi dữ liệu từ file thành công! 🎉", "success");
+    } catch (err) {
+      showToast("Lỗi khi đọc file sao lưu: " + err.message, "error");
     }
   };
   reader.readAsText(file);
 }
 
 function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function icon(name) { return `<span aria-hidden="true">${ICONS[name] || "•"}</span>`; }
 function getPlace(id) { return places.find((place) => place.id === id); }
 function isSaved(id) { return state.saved.includes(id); }
+
 function initials(name) {
-  if (!name || name === "Eat with me") return "EW";
-  return name.split(" ").map((word) => word[0]).slice(-2).join("").toUpperCase();
+  return (name || "EM").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function avatar(person, extra = "") {
   if (person?.picture) {
-    return `<span class="avatar ${person.color || ""} ${extra}" aria-hidden="true"><img src="${escapeHtml(person.picture)}" alt="${escapeHtml(person.name || "Avatar")}" class="avatar-img" /></span>`;
+    return `<div class="avatar ${extra}"><img src="${escapeHtml(person.picture)}" alt="${escapeHtml(person.name || "User")}" /></div>`;
   }
-  const name = person?.name || "Khách";
-  return `<span class="avatar ${person?.color || ""} ${extra}" aria-hidden="true">${escapeHtml(person?.initials || initials(name))}</span>`;
+  const color = person?.color || "green";
+  return `<div class="avatar ${color} ${extra}">${escapeHtml(initials(person?.name || "Eat with me"))}</div>`;
 }
 
 function statusLabel(place) {
-  return place.status === "open"
-    ? `<span class="status">Đang mở · đóng ${escapeHtml(place.closes)}</span>`
-    : `<span class="status closed">Đã đóng · ${escapeHtml(place.closes)}</span>`;
+  const isOpen = place.status === "open";
+  return `<span class="status ${isOpen ? "open" : "closed"}">${isOpen ? `Đang mở · đóng lúc ${escapeHtml(place.closes)}` : escapeHtml(place.closes)}</span>`;
 }
 
 function placePhoto(place) {
-  return `<div class="place-photo ${place.color}" aria-hidden="true"></div>`;
+  return `<div class="place-photo ${place.color || "bun"}"></div>`;
 }
 
 function getCategoryMeta(catName) {
-  if (!catName) return FOOD_CATEGORIES[FOOD_CATEGORIES.length - 1];
-  const clean = String(catName).trim().toLowerCase();
-  const found = FOOD_CATEGORIES.find((c) => c.name.toLowerCase() === clean || clean.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(clean));
-  return found || { name: catName, bg: "#f0ece4", color: "#544438" };
+  return FOOD_CATEGORIES.find((c) => c.name.toLowerCase() === (catName || "").toLowerCase()) || {
+    name: catName || "Khác",
+    bg: "#000000",
+    color: "#ffffff",
+  };
 }
 
 function getPriceMeta(priceName) {
-  if (!priceName) return PRICE_TIERS[0];
-  const clean = String(priceName).trim().toLowerCase();
-  const found = PRICE_TIERS.find((p) => p.name.toLowerCase() === clean || clean.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(clean));
-  return found || { name: priceName, bg: "#ffd5cc", color: "#c23f27" };
+  return PRICE_TIERS.find((p) => p.name === priceName) || {
+    name: priceName || "<100k",
+    bg: "#ffd5cc",
+    color: "#c23f27",
+  };
 }
 
 function categoryBadge(categoryName) {
   const meta = getCategoryMeta(categoryName);
-  const borderStyle = meta.border ? `border: 1px solid ${meta.border};` : "";
-  return `<span class="food-pill" style="background:${meta.bg};color:${meta.color};${borderStyle}">${escapeHtml(meta.name)}</span>`;
+  return `<span class="food-badge-pill" style="background:${meta.bg};color:${meta.color};${meta.border ? `border:1px solid ${meta.border};` : ""}">${escapeHtml(meta.name)}</span>`;
 }
 
 function priceBadge(priceText) {
   const meta = getPriceMeta(priceText);
-  return `<span class="food-pill" style="background:${meta.bg};color:${meta.color}">${escapeHtml(meta.name)}</span>`;
+  return `<span class="food-badge-pill" style="background:${meta.bg};color:${meta.color};">${escapeHtml(meta.name)}</span>`;
 }
 
 function placeCard(place, { compact = false } = {}) {
+  const note = state.notes[place.id];
   return `
     <article class="place-card ${compact ? "compact" : ""}" data-place-id="${place.id}">
       ${placePhoto(place)}
       <div class="place-copy">
-        <h3>${escapeHtml(place.name)}</h3>
-        <div class="place-tags-row" style="display:flex;gap:5px;align-items:center;margin:3px 0 6px;flex-wrap:wrap;">
+        <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
           ${categoryBadge(place.category)}
           ${priceBadge(place.price || "<100k")}
-          <span style="font-size:11px;color:var(--ink-muted)">· ${escapeHtml(place.distance)}</span>
+          <span style="font-size:11.5px;color:var(--ink-muted);margin-left:auto;font-weight:700;">★ ${escapeHtml(place.rating)}</span>
         </div>
+        <h3 data-action="open-place" data-place-id="${place.id}" style="cursor:pointer;">${escapeHtml(place.name)}</h3>
+        <p>${escapeHtml(place.address)} · <strong>${escapeHtml(place.distance)}</strong></p>
+        ${note ? `<div style="font-size:11.5px;color:var(--coral-dark);background:rgba(229,93,66,0.08);padding:3px 8px;border-radius:6px;margin-bottom:6px;display:inline-block;">📝 ${escapeHtml(note)}</div>` : ""}
         ${statusLabel(place)}
       </div>
       <div class="place-actions">
@@ -699,16 +474,15 @@ function renderTopbar() {
         ${state.installAvailable ? `<button class="install-button" data-action="install-app">Cài app</button>` : ""}
         ${
           state.user
-            ? `<div class="user-profile-badge" data-action="open-profile" aria-label="Hồ sơ ${escapeHtml(state.user.name)}" title="${escapeHtml(state.user.email)}">
+            ? `<div class="user-profile-badge" data-action="open-profile" aria-label="Hồ sơ ${escapeHtml(state.user.name)}" title="${escapeHtml(state.user.email || "")}">
                 <img src="${escapeHtml(state.user.picture)}" alt="${escapeHtml(state.user.name)}" />
                 <span class="user-name">${escapeHtml(state.user.name)}</span>
               </div>`
-            : `<button type="button" class="google-login-btn" data-action="open-profile" aria-label="Đăng nhập bằng Google">
+            : `<button type="button" class="google-login-btn" data-action="open-profile" aria-label="Hồ sơ cá nhân">
                 ${googleSvgIcon()}
-                <span>Đăng nhập</span>
+                <span>Hồ sơ</span>
               </button>`
         }
-        <button class="icon-button" data-action="open-inbox" aria-label="Mở thông báo">${icon("bell")}<span class="notification-dot"></span></button>
         ${
           !state.user
             ? `<button class="avatar green" data-action="open-profile" aria-label="Hồ sơ cá nhân" style="cursor:pointer;border:0;">${escapeHtml(initials(profileName))}</button>`
@@ -722,16 +496,13 @@ function renderSidebar() {
   const nav = [
     ["explore", "compass", "Khám phá"],
     ["saved", "bookmark", "Quán đã lưu"],
-    ["friends", "friends", "Bạn bè"],
-    ["inbox", "inbox", "Hộp thư"],
   ];
   const profileName = state.user?.name || "Eat with me";
-  const myTag = getUserTag(state.user);
-  const userCaption = `<span class="profile-handle">${escapeHtml(myTag)}</span>`;
+  const userCaption = state.user?.email ? `<span style="color:var(--herb);font-weight:600;">● Google</span>` : `Dữ liệu lưu trên máy`;
   return `
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
-      <div class="nav-label">Không gian của bạn</div>
+      <div class="nav-label">Không gian ẩm thực</div>
       <nav class="nav" aria-label="Điều hướng chính">
         ${nav.map(([view, iconName, label]) => `<button class="nav-button ${state.view === view ? "active" : ""}" data-action="navigate" data-view="${view}"><span class="icon">${icon(iconName)}</span><span>${label}</span></button>`).join("")}
       </nav>
@@ -751,8 +522,6 @@ function renderMobileTabbar() {
   const nav = [
     ["explore", "compass", "Khám phá"],
     ["saved", "bookmark", "Đã lưu"],
-    ["friends", "friends", "Bạn bè"],
-    ["inbox", "inbox", "Hộp thư"],
   ];
   return `<nav class="mobile-tabbar" aria-label="Điều hướng trên điện thoại">${nav.map(([view, iconName, label]) => `<button class="mobile-tab ${state.view === view ? "active" : ""}" data-action="navigate" data-view="${view}"><span class="mobile-tab-icon">${icon(iconName)}</span><span>${label}</span></button>`).join("")}</nav>`;
 }
@@ -763,22 +532,24 @@ function renderHero() {
       <div class="hero-copy">
         <div class="eyebrow">Hôm nay ăn gì?</div>
         <h1>Đi tìm một nơi<br /><em>đáng nhớ.</em></h1>
-        <p>Gom những quán bạn yêu, những món bạn muốn thử và những lời rủ rê không nên bỏ lỡ.</p>
+        <p>Gom những quán bạn yêu, những món bạn muốn thử và những hương vị tuyệt vời nhất.</p>
         <div class="hero-actions"><button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button><button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu</button></div>
       </div>
       <div class="hero-aside">
-        <div class="eyebrow">Bản đồ ẩm thực</div>
+        <div class="eyebrow">Bản đồ ẩm thực cá nhân</div>
         <h3>Lưu lại từng quán ăn bạn yêu thích.</h3>
-        <p>Khám phá những nơi đang được nhóm bạn của bạn nhắc đến nhiều nhất.</p>
-        <div class="mini-avatars">
-          ${friends.length ? friends.slice(0, 3).map((friend) => avatar(friend)).join("") : avatar(state.user || { name: "Eat with me", color: "green" })}
-          <span>${friends.length ? `+ ${friends.length} người bạn` : "Khám phá cùng bạn bè"}</span>
+        <p>Dữ liệu được lưu trữ an toàn, bảo vệ chống mất dữ liệu và hoạt động trơn tru ngay cả khi không có mạng.</p>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="secondary-button" data-action="open-add-place" style="font-size:12.5px;padding:8px 14px;">
+            ${icon("add")} Thêm quán mới
+          </button>
         </div>
       </div>
     </section>`;
 }
 
 function renderStats() {
+  const notesCount = Object.keys(state.notes).filter((k) => Boolean(state.notes[k])).length;
   return `
     <section class="stat-row">
       <div class="stat-card">
@@ -790,17 +561,17 @@ function renderStats() {
       </div>
       <div class="stat-card">
         <div>
-          <div class="stat-value">${friends.length}</div>
-          <div class="stat-label">người bạn</div>
-        </div>
-        <div class="stat-trend">${friends.length ? "đang kết nối" : "kết bạn qua @tag"}</div>
-      </div>
-      <div class="stat-card">
-        <div>
           <div class="stat-value">${customPlaces.length}</div>
           <div class="stat-label">quán tự tạo</div>
         </div>
         <div class="stat-trend">ghim bản đồ</div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-value">${notesCount}</div>
+          <div class="stat-label">ghi chú riêng</div>
+        </div>
+        <div class="stat-trend">lưu trên máy</div>
       </div>
     </section>`;
 }
@@ -810,12 +581,10 @@ function renderMapFallback() {
   return `<div id="map-fallback" class="map-fallback hidden"><div class="map-surface">${savedPlaces.map((place) => `<button class="map-pin ${place.pin}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div></div>`;
 }
 
-// This definition intentionally sits after the original mock-map function.
-// Function declarations are hoisted; the latest one is used by renderExplore.
 function renderMap() {
   const savedCount = places.filter((place) => isSaved(place.id)).length;
   return `
-    <section class="panel map-panel" data-map-shell>
+    <section class="panel map-panel" data-map-shell style="margin-bottom:20px;">
       <div class="map-toolbar">
         <button class="map-chip active" data-action="fit-saved" aria-label="Xem các quán đã lưu">Đã lưu · ${savedCount}</button>
         <button class="map-chip map-locate-chip" data-action="locate-device">${icon("compass")} Định vị tôi</button>
@@ -831,52 +600,15 @@ function renderMap() {
     </section>`;
 }
 
-function renderActivity() {
-  return `
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <h2>Bạn bè đang ăn gì</h2>
-          <p>Những gợi ý mới nhất từ nhóm của bạn</p>
-        </div>
-        <button class="text-button" data-action="navigate" data-view="friends">Xem tất cả ${icon("arrow")}</button>
-      </div>
-      ${activities.length ? `
-        <div class="friend-feed">
-          ${activities.map((activity) => `
-            <div class="friend-card">
-              ${avatar(activity.friend)}
-              <div class="friend-text">
-                <strong>${escapeHtml(activity.friend.name)}</strong> ${activity.text} <strong>${escapeHtml(activity.place.name)}</strong>
-                <div class="friend-meta">${escapeHtml(activity.time)} · ${escapeHtml(activity.place.category)}</div>
-              </div>
-              ${placePhoto(activity.place).replace('place-photo', 'friend-thumb')}
-            </div>
-          `).join("")}
-        </div>
-      ` : `
-        <div class="empty-state" style="padding:28px 16px;">
-          <div class="empty-mark">👥</div>
-          <h3 style="font-size:15px;margin-bottom:4px;">Chưa có hoạt động bạn bè</h3>
-          <p class="muted" style="font-size:12px;max-width:260px;margin:0 auto 12px;">Kết bạn bằng @tag để cùng nhau chia sẻ quán ăn và thấy gợi ý mới nhất.</p>
-          <button class="primary-button" data-action="navigate" data-view="friends" style="font-size:12px;padding:8px 14px;margin:0 auto;">
-            ＋ Kết bạn qua @tag
-          </button>
-        </div>
-      `}
-    </section>
-  `;
-}
-
 function renderSearchPanel() {
   const query = state.query.trim().toLowerCase();
   if (!query) return "";
   const results = places.filter((place) => `${place.name} ${place.category} ${place.address}`.toLowerCase().includes(query));
-  return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>EatWithMe sẽ gợi ý thêm khi bạn kết nối Google Places API.</p></div>`}</section>`;
+  return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>Bạn có thể bấm nút "Thêm quán" để tự ghim địa điểm này lên bản đồ.</p></div>`}</section>`;
 }
 
 function renderExplore() {
-  return `${renderHero()}${renderSearchPanel()}${renderStats()}<section class="content-grid">${renderMap()}${renderActivity()}</section>`;
+  return `${renderHero()}${renderSearchPanel()}${renderStats()}${renderMap()}`;
 }
 
 function renderSaved() {
@@ -935,136 +667,9 @@ function renderSaved() {
     </section>`;
 }
 
-function renderFriends() {
-  const myTag = getUserTag(state.user);
-  return `
-    <div class="page-title-row">
-      <div>
-        <div class="eyebrow">Kết nối & Tag bạn bè</div>
-        <h1>Bạn bè</h1>
-        <p>Tìm kiếm qua @tag từ máy chủ để cùng lập danh sách quán ăn.</p>
-      </div>
-      <button class="primary-button" data-action="focus-add-friend">${icon("add")} Kết bạn qua @tag</button>
-    </div>
-
-    <!-- My Tag Banner -->
-    <div class="my-tag-card">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="avatar green" style="width:46px;height:46px;font-size:16px;">
-          ${escapeHtml(initials(state.user?.name || "Eat with me"))}
-        </div>
-        <div>
-          <div style="font-size:12px;color:var(--ink-muted);margin-bottom:2px;">Tag cá nhân của bạn:</div>
-          <div class="my-tag-badge">${escapeHtml(myTag)}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="secondary-button" data-action="copy-my-tag" style="font-size:12px;padding:8px 14px;">
-          ${icon("share")} Sao chép @tag
-        </button>
-        <button class="secondary-button" data-action="open-profile" style="font-size:12px;padding:8px 14px;">
-          Đổi @tag
-        </button>
-      </div>
-    </div>
-
-    <div class="friends-layout">
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <h2>Danh sách bạn bè</h2>
-            <p>${friends.length} người bạn đang kết nối</p>
-          </div>
-          <button class="text-button" data-action="copy-my-tag">Chia sẻ @tag ${icon("share")}</button>
-        </div>
-
-        <form class="add-friend-bar" onsubmit="event.preventDefault();" style="display:flex;gap:8px;margin-bottom:16px;">
-          <input id="friend-tag-input" class="form-input" type="text" placeholder="Nhập @tag bạn bè từ máy chủ (vd: @eatwithme)..." autocomplete="off" />
-          <button type="button" class="primary-button" data-action="add-friend-by-tag" style="white-space:nowrap;padding:10px 16px;">+ Kết bạn</button>
-        </form>
-
-        ${friends.length ? `
-          <div class="friend-list-large">
-            ${friends.map((friend) => `
-              <div class="person-row">
-                ${avatar(friend)}
-                <div class="person-copy">
-                  <strong>
-                    ${escapeHtml(friend.name)}
-                    <span class="friend-tag-badge">${escapeHtml(friend.tag || `@${friend.id}`)}</span>
-                  </strong>
-                  <span>${escapeHtml(friend.caption || "bạn bè đã kết nối")}</span>
-                </div>
-                <button class="secondary-button" data-action="view-friend" data-friend-id="${friend.id}">Xem quán</button>
-              </div>
-            `).join("")}
-          </div>
-        ` : `
-          <div class="empty-state" style="padding:36px 16px;">
-            <div class="empty-mark">👥</div>
-            <h3 style="font-size:16px;margin-bottom:4px;">Chưa có bạn bè</h3>
-            <p class="muted" style="max-width:320px;margin:0 auto 16px;font-size:12.5px;">
-              Nhập @tag của bạn bè ở ô tìm kiếm phía trên để tìm tài khoản trên máy chủ, hoặc gửi tag <strong>${escapeHtml(myTag)}</strong> cho bạn bè để kết nối.
-            </p>
-            <button class="secondary-button" data-action="copy-my-tag" style="margin:0 auto;">
-              ${icon("share")} Sao chép @tag của tôi
-            </button>
-          </div>
-        `}
-      </section>
-
-      <aside class="invite-card">
-        <div class="eyebrow" style="color:#ffd5c4">Rủ thêm một người</div>
-        <h3>Quán ngon hơn khi có người để tag.</h3>
-        <p>Gửi @tag của bạn cho bạn bè để cùng tìm quán ăn và lưu lại những khoảnh khắc đáng nhớ.</p>
-        <button class="secondary-button" data-action="copy-my-tag">Sao chép ${escapeHtml(myTag)} ${icon("share")}</button>
-      </aside>
-    </div>`;
-}
-
-function renderInbox() {
-  const notifications = [];
-  return `
-    <div class="page-title-row">
-      <div>
-        <div class="eyebrow">Bạn không bỏ lỡ gì cả</div>
-        <h1>Hộp thư</h1>
-        <p>Lời mời, lời rủ rê và những địa điểm được gửi đến bạn.</p>
-      </div>
-      <button class="secondary-button" data-action="mark-read">Đánh dấu đã đọc</button>
-    </div>
-    <section class="panel">
-      ${notifications.length ? `
-        <div class="inbox-list">
-          ${notifications.map((item) => `
-            <div class="notification ${item.unread ? "unread" : ""}">
-              ${avatar(item.person)}
-              <div>
-                <p><strong>${escapeHtml(item.title)}</strong></p>
-                <small>${escapeHtml(item.body)}</small>
-              </div>
-              ${item.unread ? '<span class="dot"></span>' : ''}
-              ${item.placeId ? `<button class="round-button" data-action="open-place" data-place-id="${item.placeId}" aria-label="Mở địa điểm">${icon("arrow")}</button>` : ""}
-            </div>
-          `).join("")}
-        </div>
-      ` : `
-        <div class="empty-state" style="padding:36px 16px;">
-          <div class="empty-mark">✉</div>
-          <h3>Hộp thư trống</h3>
-          <p class="muted" style="max-width:320px;margin:0 auto 14px;">Khi bạn bè chia sẻ quán ăn hoặc gửi lời rủ rê, bạn sẽ nhận được thông báo tại đây.</p>
-          <button class="primary-button" data-action="navigate" data-view="friends" style="margin:0 auto;">
-            ＋ Kết nối bạn bè qua @tag
-          </button>
-        </div>
-      `}
-    </section>
-  `;
-}
-
 function renderMain() {
-  const pages = { explore: renderExplore, saved: renderSaved, friends: renderFriends, inbox: renderInbox };
-  return pages[state.view]();
+  const pages = { explore: renderExplore, saved: renderSaved };
+  return pages[state.view] ? pages[state.view]() : renderExplore();
 }
 
 function renderApp() {
@@ -1260,28 +865,6 @@ function withLocationTimeout(promise, timeoutMs) {
   });
 }
 
-async function checkFastPermissions() {
-  if (isNativeCapacitor()) {
-    const Geolocation = await loadNativeGeolocation();
-    if (!Geolocation) return "prompt";
-    try {
-      const perms = await Geolocation.checkPermissions();
-      return perms?.location || "prompt";
-    } catch {
-      return "prompt";
-    }
-  }
-  if (typeof navigator !== "undefined" && navigator.permissions?.query) {
-    try {
-      const perm = await navigator.permissions.query({ name: "geolocation" });
-      return perm?.state || "prompt";
-    } catch {
-      return "prompt";
-    }
-  }
-  return "prompt";
-}
-
 async function requestFastPosition() {
   if (isNativeCapacitor()) {
     const Geolocation = await loadNativeGeolocation();
@@ -1375,7 +958,6 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
     }).addTo(mapState.instance);
   }
 
-  // Google Maps-style accuracy halo circle
   const radius = Number.isFinite(accuracy) ? Math.max(10, Math.min(accuracy, 1200)) : null;
   if (radius && radius < 1200) {
     if (mapState.accuracyCircle) {
@@ -1445,28 +1027,6 @@ async function fetchIpLocation() {
       }
     }
   } catch {
-    /* try next */
-  }
-
-  // Tertiary: local API
-  try {
-    const localRes = await fetch("/api/v1/geoip", {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    if (localRes.ok) {
-      const localData = await localRes.json();
-      if (Number.isFinite(localData.lat) && Number.isFinite(localData.lng)) {
-        window.clearTimeout(timer);
-        return {
-          lat: localData.lat,
-          lng: localData.lng,
-          city: localData.city || "Hà Nội",
-          source: "ip-local",
-        };
-      }
-    }
-  } catch {
     /* ignore */
   } finally {
     window.clearTimeout(timer);
@@ -1514,7 +1074,6 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
       resolve(result);
     }
 
-    // Low-accuracy Wi-Fi Positioning fallback (Google Location Services on Wi-Fi BSSID)
     function tryLowAccuracyFallback() {
       if (settled || bestCoords) return;
       try {
@@ -1541,7 +1100,6 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
       }
     }
 
-    // Safety timeout: If high accuracy doesn't provide a fix within 2.8s, run low accuracy Wi-Fi fallback
     fallbackTimeout = window.setTimeout(() => {
       if (bestCoords) {
         finish({ position: { coords: bestCoords }, source: "best-stream" });
@@ -1556,7 +1114,6 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
       }
     }, 2800);
 
-    // Primary: Google Maps-style streaming with High Accuracy
     try {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -1574,19 +1131,16 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
             onUpdate(pos, { source: accuracy <= 35 ? "gps" : "wifi" });
           }
 
-          // If high quality fix arrives (<= 25m), finish promptly
           if (accuracy <= 25) {
             finish({ position: pos, source: "gps", precise: true });
           }
         },
         (err) => {
           if (settled) return;
-          // If code 1 (permission denied), stop immediately
           if (err?.code === 1) {
             finish({ error: err });
             return;
           }
-          // If code 2 (unavailable) or code 3 (timeout on high accuracy), run Wi-Fi fallback immediately
           tryLowAccuracyFallback();
         },
         { enableHighAccuracy: true, timeout: 7000, maximumAge: 10000 },
@@ -1813,12 +1367,10 @@ function loginDemoGoogleUser() {
     loggedAt: new Date().toISOString(),
   };
   saveStorage(googleUserKey, state.user);
-  backend.userId = getBackendUserId();
   saveLocalState();
-  bootstrapBackend();
   state.modal = null;
   renderApp();
-  showToast(`Chào mừng ${state.user.name} đã đăng nhập Google!`, "success");
+  showToast(`Chào mừng ${state.user.name} đã đăng nhập!`, "success");
 }
 
 function handleGoogleCredentialResponse(response) {
@@ -1833,12 +1385,10 @@ function handleGoogleCredentialResponse(response) {
       loggedAt: new Date().toISOString(),
     };
     saveStorage(googleUserKey, state.user);
-    backend.userId = getBackendUserId();
     saveLocalState();
-    bootstrapBackend();
     state.modal = null;
     renderApp();
-    showToast(`Chào mừng ${state.user.name} đã kết nối Google!`, "success");
+    showToast(`Chào mừng ${state.user.name}!`, "success");
   }
 }
 window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
@@ -1851,9 +1401,7 @@ function logoutUser() {
       window.google.accounts.id.disableAutoSelect();
     }
   } catch {}
-  backend.userId = getBackendUserId();
   saveLocalState();
-  bootstrapBackend();
   state.modal = null;
   renderApp();
   showToast("Đã đăng xuất tài khoản Google", "success");
@@ -1890,198 +1438,37 @@ function tryMountGoogleButton() {
   }
 }
 
-function copyMyTag() {
-  const tag = getUserTag(state.user);
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(tag).then(() => {
-      showToast(`Đã sao chép tag ${tag}!`, "success");
-    }).catch(() => {
-      showToast(`Tag của bạn: ${tag}`, "info");
-    });
-  } else {
-    showToast(`Tag của bạn: ${tag}`, "info");
-  }
-}
-
-async function syncUserProfileToServer() {
-  const user = state.user;
-  const tag = getUserTag(user);
-  const name = user?.name || "Eat with me";
-  const myId = user?.id || getBackendUserId();
-  try {
-    const res = await fetch("/api/v1/users/profile", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-EatWithMe-User": myId,
-      },
-      body: JSON.stringify({
-        id: myId,
-        name,
-        tag,
-        email: user?.email || null,
-        picture: user?.picture || null,
-      }),
-    });
-    if (res.ok) {
-      console.log("Synced profile to server:", tag);
-    }
-  } catch (e) {
-    // Offline or static serverless
-  }
-}
-
-async function addFriendByTag() {
-  const input = document.querySelector("#friend-tag-input");
-  let val = input?.value.trim();
-  if (!val) {
-    showToast("Vui lòng nhập @tag của bạn bè", "error");
-    input?.focus();
-    return;
-  }
-  if (!val.startsWith("@")) val = `@${val}`;
-  const cleanTag = val.toLowerCase();
-
-  // Validate format
-  const formatCheck = validateTagFormat(cleanTag);
-  if (!formatCheck.valid) {
-    showToast(formatCheck.message, "error");
-    input?.focus();
-    return;
-  }
-
-  const myTag = getUserTag(state.user).toLowerCase();
-  if (cleanTag === myTag) {
-    showToast("Đây là @tag của chính bạn mà!", "error");
-    return;
-  }
-
-  if (friends.some((f) => (f.tag || "").toLowerCase() === cleanTag)) {
-    showToast(`Bạn đã kết nối với ${val} rồi`, "info");
-    return;
-  }
-
-  showToast(`Đang kiểm tra tài khoản ${val}...`, "info");
-
-  const backendBase = resolveBackendBaseUrl();
-  if (backendBase) {
-    try {
-      const res = await fetch(`${backendBase}/v1/users/search?tag=${encodeURIComponent(cleanTag)}`, {
-        headers: {
-          Accept: "application/json",
-          "X-EatWithMe-User": state.user?.id || getBackendUserId(),
-        },
-      });
-      const json = await res.json();
-      if (res.ok && json.ok && json.user) {
-        const sUser = json.user;
-        const newFriend = {
-          id: sUser.id || `friend-${Date.now()}`,
-          tag: sUser.tag || val,
-          name: sUser.name || val.replace(/^@/, ""),
-          initials: initials(sUser.name || val.replace(/^@/, "")),
-          caption: sUser.caption || "tài khoản đã xác thực từ máy chủ",
-          color: sUser.color || "green",
-          picture: sUser.picture || null,
-        };
-
-        friends = [newFriend, ...friends];
-        saveStorage(friendsStorageKey, friends);
-        if (input) input.value = "";
-        renderApp();
-        showToast(`Đã tìm thấy & kết bạn với ${newFriend.name} (${val})! 🎉`, "success");
-        return;
-      } else {
-        showToast(json.error || `Tài khoản ${val} không tồn tại trên hệ thống!`, "error");
-        input?.focus();
-        return;
-      }
-    } catch (e) {
-      console.warn("Server search error:", e);
-    }
-  }
-
-  // Local-First / Offline mode existence check
-  const claimed = getClaimedTags();
-  if (claimed[cleanTag]) {
-    const ownerId = claimed[cleanTag];
-    const baseName = val.replace(/^@/, "").replace(/[._]/g, " ").trim();
-    const capitalizedName = baseName.charAt(0).toUpperCase() + baseName.slice(1);
-    const newFriend = {
-      id: ownerId || `friend-${Date.now()}`,
-      tag: val,
-      name: capitalizedName,
-      initials: initials(capitalizedName),
-      caption: "tài khoản đã đăng ký",
-      color: "green",
-    };
-
-    friends = [newFriend, ...friends];
-    saveStorage(friendsStorageKey, friends);
-    if (input) input.value = "";
-    renderApp();
-    showToast(`Đã tìm thấy & kết bạn với ${val}! 🎉`, "success");
-  } else {
-    showToast(`Không tìm thấy tài khoản "${val}" trên hệ thống. Vui lòng kiểm tra lại @tag!`, "error");
-    input?.focus();
-  }
-}
-
 function saveProfileInfo() {
   const nameInput = document.querySelector("#profile-name-input");
-  const tagInput = document.querySelector("#profile-tag-input");
-  const newName = nameInput?.value.trim() || state.user?.name || "Eat with me";
-  const rawTag = tagInput?.value.trim() || state.user?.tag || "@eatwithme";
-
-  const myId = state.user?.id || getBackendUserId();
-  const check = checkTagAvailability(rawTag, myId);
-
-  if (!check.valid) {
-    showToast(check.message, "error");
-    tagInput?.focus();
-    const statusEl = document.querySelector("#tag-validation-status");
-    if (statusEl) {
-      statusEl.innerHTML = `<span style="color:#d33d2a;font-weight:700;">✕ ${escapeHtml(check.message)}</span>`;
-    }
+  const newName = nameInput?.value.trim();
+  if (!newName) {
+    showToast("Vui lòng nhập tên hiển thị", "error");
+    nameInput?.focus();
     return;
   }
-
-  const finalTag = check.tag;
-
-  // Release old tag in registry if changed
-  const oldTag = normalizeTag(state.user?.tag || "");
-  const claimed = getClaimedTags();
-  if (oldTag && oldTag !== finalTag && claimed[oldTag] === myId) {
-    delete claimed[oldTag];
-  }
-  claimed[finalTag] = myId;
-  saveStorage(claimedTagsKey, claimed);
 
   state.user = {
     ...(state.user || {}),
-    id: myId,
+    id: state.user?.id || "local-user",
     name: newName,
-    tag: finalTag,
-    email: state.user?.email || "andoanthien08@gmail.com",
+    email: state.user?.email || null,
     picture: state.user?.picture || null,
   };
 
   saveStorage(googleUserKey, state.user);
   saveLocalState();
-  syncUserProfileToServer();
   state.modal = null;
   renderApp();
-  showToast(`Đã lưu tag độc nhất: ${finalTag}!`, "success");
+  showToast("Đã cập nhật tên hiển thị!", "success");
 }
 
 function renderProfileModal() {
   const isLogged = Boolean(state.user);
   const profileName = state.user?.name || "Eat with me";
-  const myTag = getUserTag(state.user);
 
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ & Tag cá nhân" data-modal-card style="max-width:440px;">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Hồ sơ cá nhân" data-modal-card style="max-width:440px;">
         <div class="modal-content" style="padding:26px 22px;">
           ${
             isLogged && state.user?.picture
@@ -2090,8 +1477,8 @@ function renderProfileModal() {
                 <img src="${escapeHtml(state.user.picture)}" alt="${escapeHtml(state.user.name)}" />
                 <div style="min-width:0;flex:1;">
                   <h2 style="font-size:18px;margin:0 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.name)}</h2>
-                  <p class="muted" style="font-size:12px;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.email)}</p>
-                  <span class="google-sync-tag">✓ Đã đồng bộ Google</span>
+                  <p class="muted" style="font-size:12px;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.email || "")}</p>
+                  <span class="google-sync-tag">✓ Đã liên kết Google</span>
                 </div>
               </div>`
               : `
@@ -2100,7 +1487,7 @@ function renderProfileModal() {
                   ${escapeHtml(initials(profileName))}
                 </div>
                 <h2 style="font-size:20px;margin:0 0 2px;">${escapeHtml(profileName)}</h2>
-                <div class="my-tag-badge" style="margin-bottom:10px;">${escapeHtml(myTag)}</div>
+                <div class="muted" style="font-size:12px;margin-bottom:10px;">Ứng dụng lưu trữ cá nhân (Local-First)</div>
               </div>`
           }
 
@@ -2109,17 +1496,25 @@ function renderProfileModal() {
               <label for="profile-name-input" style="font-size:12px;font-weight:700;">Tên hiển thị</label>
               <input id="profile-name-input" class="form-input" type="text" value="${escapeHtml(state.user?.name || "")}" placeholder="Eat with me" />
             </div>
-            <div class="form-group" style="margin-bottom:10px;">
-              <label for="profile-tag-input" style="font-size:12px;font-weight:700;display:flex;justify-content:space-between;">
-                <span>Tag cá nhân (@tag độc nhất)</span>
-                <span style="font-size:11px;color:var(--coral);font-weight:700;">Không trùng lặp</span>
-              </label>
-              <input id="profile-tag-input" class="form-input" type="text" value="${escapeHtml(state.user?.tag || "")}" placeholder="@eatwithme" autocomplete="off" />
-              <div id="tag-validation-status" style="margin-top:4px;font-size:11px;min-height:16px;"></div>
-            </div>
             <button type="button" class="primary-button" data-action="save-profile-info" style="width:100%;padding:9px;font-size:12.5px;justify-content:center;">
-              Lưu thay đổi @tag & Tên
+              Lưu tên hiển thị
             </button>
+          </div>
+
+          <!-- Google Auth Section -->
+          <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px;text-align:left;">Tài khoản Google</div>
+            ${
+              isLogged
+                ? `<button type="button" class="secondary-button" data-action="logout-user" style="width:100%;justify-content:center;color:var(--coral-dark);">
+                    Đăng xuất tài khoản
+                  </button>`
+                : `
+                <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:8px;"></div>
+                <button type="button" class="secondary-button" data-action="demo-google-login" style="width:100%;justify-content:center;font-size:12px;">
+                  Đăng nhập thử nghiệm
+                </button>`
+            }
           </div>
 
           <div style="background:var(--paper-soft);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:16px;">
@@ -2171,6 +1566,7 @@ function renderModal() {
 
 function renderPlaceModal(placeId) {
   const place = getPlace(placeId);
+  if (!place) return "";
   const note = state.notes[place.id] || "";
   return `
     <div class="modal-backdrop" data-action="close-modal">
@@ -2201,41 +1597,78 @@ function renderPlaceModal(placeId) {
 
 function renderNoteModal(placeId) {
   const place = getPlace(placeId);
+  if (!place) return "";
   const preview = state.photoPreviews[place.id] ? `<div style="margin-top:12px"><img src="${state.photoPreviews[place.id]}" alt="Ảnh xem trước" style="width:100%;height:150px;object-fit:cover;border-radius:14px;border:1px solid var(--line)" /></div>` : "";
   return `<div class="modal-backdrop" data-action="close-modal"><article class="modal" role="dialog" aria-modal="true" aria-label="Ghi chú cho ${escapeHtml(place.name)}" data-modal-card><div class="modal-content"><div class="eyebrow">Ghi chú riêng</div><h2>${escapeHtml(place.name)}</h2><p class="muted">Ghi lại điều bạn muốn nhớ cho lần sau.</p><textarea id="note-input" rows="5" style="width:100%;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:13px;color:var(--ink);background:var(--paper-soft);font:inherit" placeholder="Ví dụ: gọi bàn ngoài hiên, thử thêm món...">${escapeHtml(state.notes[place.id] || "")}</textarea>${preview}<label class="secondary-button" style="display:inline-flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">＋ Thêm ảnh thực tế<input id="photo-input" type="file" accept="image/*" hidden /></label><div class="modal-footer" style="margin-top:18px"><button class="secondary-button" data-action="close-modal">Hủy</button><button class="primary-button" data-action="save-note" data-place-id="${place.id}">Lưu ghi chú</button></div></div></article></div>`;
 }
 
 function renderShareModal(placeId) {
   const place = getPlace(placeId);
+  if (!place) return "";
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.address}`)}`;
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Chia sẻ ${escapeHtml(place.name)}" data-modal-card>
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Chia sẻ ${escapeHtml(place.name)}" data-modal-card style="max-width:440px;">
         <div class="modal-content">
-          <div class="eyebrow">Gửi một lời rủ rê</div>
-          <h2>Chia sẻ ${escapeHtml(place.name)}</h2>
-          <p class="muted">Chọn người bạn muốn rủ đi cùng.</p>
-          ${friends.length ? `
-            <div class="share-list">
-              ${friends.map((friend) => `<button class="share-person ${state.selectedShareFriends.has(friend.id) ? "selected" : ""}" data-action="toggle-share-friend" data-friend-id="${friend.id}">${avatar(friend)}<span>${escapeHtml(friend.name)}</span><span class="check">${icon("check")}</span></button>`).join("")}
-            </div>
-            <div class="modal-footer">
-              <button class="secondary-button" data-action="close-modal">Hủy</button>
-              <button class="primary-button" data-action="confirm-share" data-place-id="${place.id}">Gửi lời rủ rê ${icon("share")}</button>
-            </div>
-          ` : `
-            <div class="empty-state" style="padding:24px 12px;margin-bottom:12px;">
-              <div class="empty-mark">👥</div>
-              <h3 style="font-size:15px;margin-bottom:4px;">Chưa có bạn bè trong danh sách</h3>
-              <p class="muted" style="font-size:12px;max-width:280px;margin:0 auto 12px;">Hãy kết bạn qua @tag ở mục Bạn bè để có thể rủ nhau đi ăn.</p>
-              <button class="primary-button" data-action="focus-add-friend" style="margin:0 auto;font-size:12px;">＋ Thêm bạn bè qua @tag</button>
-            </div>
-            <div class="modal-footer">
-              <button class="secondary-button" data-action="close-modal" style="width:100%;">Đóng</button>
-            </div>
-          `}
+          <div class="eyebrow">Chia sẻ địa điểm</div>
+          <h2>${escapeHtml(place.name)}</h2>
+          <p class="muted">${escapeHtml(place.address)} (${escapeHtml(place.category)} · ${escapeHtml(place.price || "<100k")})</p>
+          
+          <div style="display:grid;gap:10px;margin:18px 0;">
+            <button class="primary-button" data-action="copy-place-info" data-place-id="${place.id}" style="justify-content:center;display:flex;align-items:center;gap:8px;">
+              ${icon("copy")} Sao chép thông tin quán
+            </button>
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="secondary-button" style="justify-content:center;display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;">
+              ${icon("mapPin")} Mở trên Google Maps
+            </a>
+            ${
+              navigator.share
+                ? `<button class="secondary-button" data-action="native-share-place" data-place-id="${place.id}" style="justify-content:center;display:flex;align-items:center;gap:8px;">
+                    ${icon("share")} Gửi qua Zalo, Tin nhắn...
+                  </button>`
+                : ""
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button class="secondary-button" data-action="close-modal" style="width:100%;">Đóng</button>
+          </div>
         </div>
       </article>
     </div>`;
+}
+
+function copyPlaceInfo(placeId) {
+  const place = getPlace(placeId);
+  if (!place) return;
+  const note = state.notes[place.id];
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.address}`)}`;
+  const text = `🍜 ${place.name}\n📍 Địa chỉ: ${place.address}\n🏷️ Loại món: ${place.category} · Giá: ${place.price || "<100k"}\n⏰ Giờ mở: ${place.hours}\n⭐ Đánh giá: ★${place.rating}${note ? `\n📝 Ghi chú: ${note}` : ""}\n🗺️ Bản đồ: ${mapsUrl}`;
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`Đã sao chép thông tin ${place.name}!`, "success");
+    }).catch(() => {
+      showToast("Không thể sao chép tự động", "error");
+    });
+  } else {
+    showToast(`Đã chọn: ${place.name}`, "info");
+  }
+}
+
+async function nativeSharePlace(placeId) {
+  const place = getPlace(placeId);
+  if (!place || !navigator.share) return;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.address}`)}`;
+  try {
+    await navigator.share({
+      title: place.name,
+      text: `Gợi ý quán ăn ngon: ${place.name} - ${place.address} (${place.category})`,
+      url: mapsUrl,
+    });
+  } catch {
+    /* User cancelled share */
+  }
 }
 
 function renderAddPlaceModal() {
@@ -2391,32 +1824,25 @@ function submitNewPlace() {
     isCustom: true,
   };
 
-  // Add to custom places
   const existingCustom = readStorage(customPlacesKey, []);
   existingCustom.unshift(newPlace);
   saveStorage(customPlacesKey, existingCustom);
 
-  // Refresh places array
   places = [newPlace, ...places.filter((p) => p.id !== newPlace.id)];
 
-  // Automatically save
   if (!state.saved.includes(newPlace.id)) {
     state.saved.unshift(newPlace.id);
   }
 
-  // Save note if provided
   if (note) {
     state.notes[newPlace.id] = note;
   }
 
   saveLocalState();
-  scheduleBackendSync();
 
-  // Close modal
   state.modal = null;
   renderModal();
 
-  // If on map, add marker and fly to it
   if (mapState.instance && window.L) {
     const iconForSaved = savedMarkerIcon(window.L);
     const marker = window.L.marker([newPlace.lat, newPlace.lng], { icon: iconForSaved })
@@ -2473,26 +1899,6 @@ function bindModalEvents() {
       renderApp();
     }
   });
-
-  const tagInput = document.querySelector("#profile-tag-input");
-  const statusEl = document.querySelector("#tag-validation-status");
-  if (tagInput && statusEl) {
-    const onTagChange = () => {
-      const val = tagInput.value.trim();
-      if (!val) {
-        statusEl.innerHTML = "";
-        return;
-      }
-      const myId = state.user?.id || "current_user";
-      const check = checkTagAvailability(val, myId);
-      if (!check.valid) {
-        statusEl.innerHTML = `<span style="color:#d33d2a;font-weight:600;display:inline-flex;align-items:center;gap:4px;">✕ ${escapeHtml(check.message)}</span>`;
-      } else {
-        statusEl.innerHTML = `<span style="color:var(--herb);font-weight:700;display:inline-flex;align-items:center;gap:4px;">✓ ${escapeHtml(check.message)}</span>`;
-      }
-    };
-    tagInput.addEventListener("input", onTagChange);
-  }
 }
 
 function handleAction(event) {
@@ -2504,17 +1910,8 @@ function handleAction(event) {
   }
   switch (action) {
     case "navigate": state.view = target.dataset.view; state.query = ""; renderApp(); break;
-    case "open-inbox": state.view = "inbox"; renderApp(); break;
     case "open-profile": state.modal = { type: "profile" }; renderModal(); break;
-    case "copy-my-tag": copyMyTag(); break;
-    case "add-friend-by-tag": addFriendByTag(); break;
     case "save-profile-info": saveProfileInfo(); break;
-    case "focus-add-friend": {
-      state.view = "friends";
-      renderApp();
-      setTimeout(() => document.querySelector("#friend-tag-input")?.focus(), 50);
-      break;
-    }
     case "focus-search": document.querySelector("#global-search")?.focus(); break;
     case "clear-search": state.query = ""; renderApp(); break;
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
@@ -2577,25 +1974,18 @@ function handleAction(event) {
       }
       break;
     }
-    case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; state.selectedShareFriends = new Set(); renderModal(); break;
+    case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; renderModal(); break;
+    case "copy-place-info": copyPlaceInfo(target.dataset.placeId); break;
+    case "native-share-place": nativeSharePlace(target.dataset.placeId); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "open-note": state.modal = { type: "note", placeId: target.dataset.placeId }; renderModal(); break;
     case "save-note": saveNote(target.dataset.placeId); break;
     case "close-modal": state.modal = null; renderModal(); break;
-    case "toggle-share-friend":
-      if (state.selectedShareFriends.has(target.dataset.friendId)) state.selectedShareFriends.delete(target.dataset.friendId);
-      else state.selectedShareFriends.add(target.dataset.friendId);
-      renderModal();
-      break;
-    case "confirm-share": confirmShare(target.dataset.placeId); break;
     case "saved-filter": state.savedFilter = target.dataset.filter; renderApp(); break;
     case "trigger-google-login": triggerGooglePrompt(); break;
     case "demo-google-login": loginDemoGoogleUser(); break;
     case "logout-user": logoutUser(); break;
     case "save-google-client-id": saveGoogleClientId(); break;
-    case "invite-friend": showToast("Đã sao chép link mời bạn bè", "success"); break;
-    case "view-friend": showToast("Đang mở danh sách quán của bạn bè", "success"); break;
-    case "mark-read": showToast("Đã đánh dấu tất cả là đã đọc", "success"); break;
     case "install-app": installApp(); break;
     default: break;
   }
@@ -2612,7 +2002,6 @@ function toggleSave(placeId) {
     showToast(`Đã lưu ${place.name}`, "success");
   }
   saveLocalState();
-  scheduleBackendSync();
   if (state.modal?.type === "place") renderModal();
   renderApp();
 }
@@ -2621,18 +2010,8 @@ function saveNote(placeId) {
   const input = document.querySelector("#note-input");
   state.notes[placeId] = input?.value.trim() || "";
   saveLocalState();
-  scheduleBackendSync();
   state.modal = { type: "place", placeId };
   showToast("Đã lưu ghi chú riêng", "success");
-  renderModal();
-}
-
-function confirmShare(placeId) {
-  const count = state.selectedShareFriends.size;
-  if (!count) { showToast("Chọn ít nhất một người bạn", "error"); return; }
-  const place = getPlace(placeId);
-  state.modal = null;
-  showToast(`Đã gửi ${count} lời rủ đến ${place.name}`, "success");
   renderModal();
 }
 
@@ -2677,5 +2056,3 @@ loadNativeGeolocation().catch(() => undefined);
 initGoogleAuth();
 renderApp();
 startLocationPrefetch();
-bootstrapBackend();
-syncUserProfileToServer();

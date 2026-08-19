@@ -1,6 +1,6 @@
 // Bump this whenever the app shell changes so an older cached app.js cannot
 // hide newly shipped features such as the interactive map.
-const CACHE_NAME = "eatwithme-shell-v33";
+const CACHE_NAME = "eatwithme-shell-v34";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -39,11 +39,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const requestUrl = new URL(event.request.url);
-  // State is server-authoritative; never serve or persist API responses from the app shell cache.
-  if (requestUrl.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
   if (NETWORK_FIRST_PATHS.has(requestUrl.pathname)) {
     event.respondWith(
       fetch(event.request).then((response) => {

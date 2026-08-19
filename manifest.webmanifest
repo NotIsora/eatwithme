@@ -1,7 +1,7 @@
 {
-  "name": "EatWithMe — food map cho nhóm bạn",
+  "name": "EatWithMe — Food Map Cá Nhân",
   "short_name": "EatWithMe",
-  "description": "Lưu, khám phá và chia sẻ những quán ăn đáng nhớ.",
+  "description": "Lưu, khám phá và chia sẻ những quán ăn đáng nhớ của bạn.",
   "lang": "vi-VN",
   "start_url": "./",
   "scope": "./",
