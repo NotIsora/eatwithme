@@ -535,12 +535,25 @@ function renderMobileTabbar() {
 }
 
 function renderMapFallback() {
-  const savedPlaces = places.filter((place) => isSaved(place.id));
+  let savedPlaces = places.filter((place) => isSaved(place.id));
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    savedPlaces = savedPlaces.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+  if (state.priceFilter && state.priceFilter !== "all") {
+    savedPlaces = savedPlaces.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
+  }
   return `<div id="map-fallback" class="map-fallback hidden"><div class="map-surface">${savedPlaces.map((place) => `<button class="map-pin ${place.pin}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div></div>`;
 }
 
 function renderMap() {
-  const savedCount = places.filter((place) => isSaved(place.id)).length;
+  let saved = places.filter((place) => isSaved(place.id));
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    saved = saved.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+  if (state.priceFilter && state.priceFilter !== "all") {
+    saved = saved.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
+  }
+  const savedCount = saved.length;
   return `
     <section class="panel map-panel" data-map-shell style="margin-bottom:20px;">
       <div class="map-toolbar">
@@ -558,40 +571,21 @@ function renderMap() {
 function renderSearchPanel() {
   const query = state.query.trim().toLowerCase();
   if (!query) return "";
-  const results = places.filter((place) => `${place.name} ${place.category} ${place.address}`.toLowerCase().includes(query));
+  let results = places.filter((place) => `${place.name} ${place.category} ${place.address}`.toLowerCase().includes(query));
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    results = results.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+  if (state.priceFilter && state.priceFilter !== "all") {
+    results = results.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
+  }
   return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>Bạn có thể bấm nút "Thêm quán" để tự ghim địa điểm này lên bản đồ.</p><button class="primary-button" data-action="open-add-place" style="margin-top:10px">${icon("add")} Thêm quán ngay</button></div>`}</section>`;
 }
 
-function renderExplore() {
-  return `${renderSearchPanel()}${renderMap()}`;
-}
-
-function renderSaved() {
-  const savedPlaces = places.filter((place) => isSaved(place.id));
-  let filtered = savedPlaces;
-
-  if (state.categoryFilter && state.categoryFilter !== "all") {
-    filtered = filtered.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
-  }
-
-  if (state.priceFilter && state.priceFilter !== "all") {
-    filtered = filtered.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
-  }
-
+function renderGsheetFilterBar(savedPlaces) {
   const selectedCategoryObj = FOOD_CATEGORIES.find((c) => c.name.toLowerCase() === (state.categoryFilter || "").toLowerCase());
   const selectedPriceObj = PRICE_TIERS.find((p) => p.name.toLowerCase() === (state.priceFilter || "").toLowerCase());
 
   return `
-    <div class="page-title-row">
-      <div>
-        <div class="eyebrow">Kho lưu trữ ẩm thực</div>
-        <h1>Quán đã lưu</h1>
-        <p>Những quán bạn muốn quay lại, lưu trữ riêng hoặc tự thêm bằng tay.</p>
-      </div>
-      <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
-    </div>
-
-    <!-- Bộ lọc dạng Dropdown Chip Google Sheets -->
     <div class="gsheet-filter-bar">
       <!-- Category Filter Dropdown -->
       <div class="gsheet-dropdown-container">
@@ -672,7 +666,49 @@ function renderSaved() {
             </button>`
           : ""
       }
+    </div>`;
+}
+
+function renderExplore() {
+  const savedPlaces = places.filter((place) => isSaved(place.id));
+  return `
+    <div class="page-title-row">
+      <div>
+        <div class="eyebrow">Bản đồ ẩm thực cá nhân</div>
+        <h1>Khám phá & Bản đồ</h1>
+        <p>Ghim các quán bạn yêu thích, tìm kiếm và lọc theo loại món hoặc mức giá.</p>
+      </div>
+      <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
     </div>
+
+    ${renderGsheetFilterBar(savedPlaces)}
+    ${renderSearchPanel()}
+    ${renderMap()}`;
+}
+
+function renderSaved() {
+  const savedPlaces = places.filter((place) => isSaved(place.id));
+  let filtered = savedPlaces;
+
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    filtered = filtered.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+
+  if (state.priceFilter && state.priceFilter !== "all") {
+    filtered = filtered.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
+  }
+
+  return `
+    <div class="page-title-row">
+      <div>
+        <div class="eyebrow">Kho lưu trữ ẩm thực</div>
+        <h1>Quán đã lưu</h1>
+        <p>Những quán bạn muốn quay lại, lưu trữ riêng hoặc tự thêm bằng tay.</p>
+      </div>
+      <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
+    </div>
+
+    ${renderGsheetFilterBar(savedPlaces)}
 
     <section class="panel">
       <div class="panel-header">
@@ -848,7 +884,13 @@ function buildInteractiveMap(L) {
     if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
   });
 
-  const saved = places.filter((place) => isSaved(place.id));
+  let saved = places.filter((place) => isSaved(place.id));
+  if (state.categoryFilter && state.categoryFilter !== "all") {
+    saved = saved.filter((place) => (place.category || "").toLowerCase() === state.categoryFilter.toLowerCase());
+  }
+  if (state.priceFilter && state.priceFilter !== "all") {
+    saved = saved.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
+  }
   const iconForSaved = savedMarkerIcon(L);
   for (const place of saved) {
     const marker = L.marker([place.lat, place.lng], { icon: iconForSaved })
