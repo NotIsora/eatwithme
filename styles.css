@@ -529,8 +529,88 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 .round-button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--ink-muted); }
 .round-button:hover { color: var(--coral); border-color: #e7b6a6; }
 .round-button.saved { color: var(--coral); background: #fff0eb; border-color: #f1c2b5; }
-
-
+/* Modal & Dialogs */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(30, 24, 19, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 0.18s ease;
+  overflow-y: auto;
+}
+.modal {
+  width: min(520px, 100%);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+  border-radius: 24px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 25px 70px rgba(27, 20, 16, 0.28);
+  animation: rise-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+.modal-hero {
+  height: 160px;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #e8ae72, #c65340 50%, #263f37);
+  color: white;
+  position: relative;
+}
+.modal-hero.cafe { background: linear-gradient(135deg, #e7c998, #8b5944 54%, #274338); }
+.modal-hero.taco { background: linear-gradient(135deg, #f2c57b, #d55c43 54%, #4e6944); }
+.modal-hero.pho { background: linear-gradient(135deg, #f3d49b, #c95c47 54%, #284439); }
+.modal-content {
+  padding: 22px;
+}
+.modal-content h2 {
+  font: 600 24px Fraunces, Georgia, serif;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.modal-content .muted {
+  color: var(--ink-muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.detail-item {
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-soft);
+}
+.detail-item span {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+.detail-item strong {
+  font-size: 13px;
+  color: var(--ink);
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+}
 
 .empty-state { padding: 50px 20px; text-align: center; border: 1px dashed #d9cfc3; border-radius: 17px; color: var(--ink-muted); }
 .empty-state .empty-mark { font-size: 34px; margin-bottom: 9px; }
