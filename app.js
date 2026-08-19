@@ -152,6 +152,7 @@ const state = {
   saved: readStorage(storageKey, initialSaved),
   categoryFilter: "all",
   priceFilter: "all",
+  openDropdown: null, // "category" | "price" | null
   modal: null,
   toastTimer: null,
   installAvailable: false,
@@ -577,8 +578,8 @@ function renderSaved() {
     filtered = filtered.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
   }
 
-  const categoryLabel = state.categoryFilter === "all" ? `Tất cả món (${savedPlaces.length})` : state.categoryFilter;
-  const priceLabel = state.priceFilter === "all" ? "Tất cả giá" : state.priceFilter;
+  const selectedCategoryObj = FOOD_CATEGORIES.find((c) => c.name.toLowerCase() === (state.categoryFilter || "").toLowerCase());
+  const selectedPriceObj = PRICE_TIERS.find((p) => p.name.toLowerCase() === (state.priceFilter || "").toLowerCase());
 
   return `
     <div class="page-title-row">
@@ -590,44 +591,84 @@ function renderSaved() {
       <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
     </div>
 
-    <!-- Bộ lọc dạng Dropdown Google Sheets -->
+    <!-- Bộ lọc dạng Dropdown Chip Google Sheets -->
     <div class="gsheet-filter-bar">
-      <div class="gsheet-filter-cell ${state.categoryFilter !== "all" ? "active-filter" : ""}">
-        <span class="gsheet-funnel-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-        </span>
-        <span class="gsheet-col-name">Loại món:</span>
-        <span class="gsheet-selected-text">${escapeHtml(categoryLabel)}</span>
-        <select id="filter-category-select" class="gsheet-select" data-action="change-filter-category" aria-label="Lọc theo loại món">
-          <option value="all" ${state.categoryFilter === "all" ? "selected" : ""}>Tất cả món (${savedPlaces.length})</option>
-          ${FOOD_CATEGORIES.map((cat) => {
-            const count = savedPlaces.filter((p) => (p.category || "").toLowerCase() === cat.name.toLowerCase()).length;
-            return `<option value="${escapeHtml(cat.name)}" ${state.categoryFilter === cat.name ? "selected" : ""}>${escapeHtml(cat.name)}${count > 0 ? ` (${count})` : ""}</option>`;
-          }).join("")}
-        </select>
-        <span class="gsheet-chevron">▾</span>
+      <!-- Category Filter Dropdown -->
+      <div class="gsheet-dropdown-container">
+        <span class="gsheet-filter-title">Loại món:</span>
+        <button type="button" class="gsheet-chip-cell ${state.openDropdown === "category" ? "is-focused" : ""}" data-action="toggle-dropdown" data-dropdown="category">
+          ${
+            selectedCategoryObj
+              ? `<span class="gsheet-chip" style="background:${selectedCategoryObj.bg};color:${selectedCategoryObj.color};${selectedCategoryObj.border ? `border:1px solid ${selectedCategoryObj.border};` : ""}">
+                  ${escapeHtml(selectedCategoryObj.name)}
+                </span>`
+              : `<span class="gsheet-chip-neutral">Tất cả món (${savedPlaces.length})</span>`
+          }
+          <span class="gsheet-cell-arrow">▾</span>
+        </button>
+
+        ${
+          state.openDropdown === "category"
+            ? `
+            <div class="gsheet-chip-menu" data-dropdown-menu>
+              <div class="gsheet-chip-item ${state.categoryFilter === "all" ? "selected" : ""}" data-action="select-category" data-value="all">
+                <span class="gsheet-chip-neutral">Tất cả món (${savedPlaces.length})</span>
+              </div>
+              ${FOOD_CATEGORIES.map((cat) => {
+                const count = savedPlaces.filter((p) => (p.category || "").toLowerCase() === cat.name.toLowerCase()).length;
+                return `
+                  <div class="gsheet-chip-item ${state.categoryFilter.toLowerCase() === cat.name.toLowerCase() ? "selected" : ""}" data-action="select-category" data-value="${escapeHtml(cat.name)}">
+                    <span class="gsheet-chip" style="background:${cat.bg};color:${cat.color};${cat.border ? `border:1px solid ${cat.border};` : ""}">
+                      ${escapeHtml(cat.name)}
+                    </span>
+                    ${count > 0 ? `<span class="gsheet-item-count">(${count})</span>` : ""}
+                  </div>`;
+              }).join("")}
+            </div>`
+            : ""
+        }
       </div>
 
-      <div class="gsheet-filter-cell ${state.priceFilter !== "all" ? "active-filter" : ""}">
-        <span class="gsheet-funnel-icon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-        </span>
-        <span class="gsheet-col-name">Mức giá:</span>
-        <span class="gsheet-selected-text">${escapeHtml(priceLabel)}</span>
-        <select id="filter-price-select" class="gsheet-select" data-action="change-filter-price" aria-label="Lọc theo mức giá">
-          <option value="all" ${state.priceFilter === "all" ? "selected" : ""}>Tất cả giá</option>
-          ${PRICE_TIERS.map((tier) => {
-            const count = savedPlaces.filter((p) => (p.price || "").toLowerCase() === tier.name.toLowerCase()).length;
-            return `<option value="${escapeHtml(tier.name)}" ${state.priceFilter === tier.name ? "selected" : ""}>${escapeHtml(tier.name)}${count > 0 ? ` (${count})` : ""}</option>`;
-          }).join("")}
-        </select>
-        <span class="gsheet-chevron">▾</span>
+      <!-- Price Filter Dropdown -->
+      <div class="gsheet-dropdown-container">
+        <span class="gsheet-filter-title">Mức giá:</span>
+        <button type="button" class="gsheet-chip-cell ${state.openDropdown === "price" ? "is-focused" : ""}" data-action="toggle-dropdown" data-dropdown="price">
+          ${
+            selectedPriceObj
+              ? `<span class="gsheet-chip" style="background:${selectedPriceObj.bg};color:${selectedPriceObj.color};">
+                  ${escapeHtml(selectedPriceObj.name)}
+                </span>`
+              : `<span class="gsheet-chip-neutral">Tất cả giá</span>`
+          }
+          <span class="gsheet-cell-arrow">▾</span>
+        </button>
+
+        ${
+          state.openDropdown === "price"
+            ? `
+            <div class="gsheet-chip-menu" data-dropdown-menu>
+              <div class="gsheet-chip-item ${state.priceFilter === "all" ? "selected" : ""}" data-action="select-price" data-value="all">
+                <span class="gsheet-chip-neutral">Tất cả giá</span>
+              </div>
+              ${PRICE_TIERS.map((tier) => {
+                const count = savedPlaces.filter((p) => (p.price || "").toLowerCase() === tier.name.toLowerCase()).length;
+                return `
+                  <div class="gsheet-chip-item ${state.priceFilter.toLowerCase() === tier.name.toLowerCase() ? "selected" : ""}" data-action="select-price" data-value="${escapeHtml(tier.name)}">
+                    <span class="gsheet-chip" style="background:${tier.bg};color:${tier.color};">
+                      ${escapeHtml(tier.name)}
+                    </span>
+                    ${count > 0 ? `<span class="gsheet-item-count">(${count})</span>` : ""}
+                  </div>`;
+              }).join("")}
+            </div>`
+            : ""
+        }
       </div>
 
       ${
         state.categoryFilter !== "all" || state.priceFilter !== "all"
           ? `<button type="button" class="gsheet-reset-btn" data-action="reset-saved-filters" title="Xóa tất cả bộ lọc">
-              <span style="font-size:13px;line-height:1;">×</span> Đặt lại bộ lọc
+              <span>×</span> Đặt lại
             </button>`
           : ""
       }
@@ -1862,12 +1903,9 @@ function bindAppEvents() {
     const file = event.target.files?.[0];
     if (file) importBackupFile(file);
   });
-  app.addEventListener("change", (event) => {
-    if (event.target.id === "filter-category-select") {
-      state.categoryFilter = event.target.value;
-      renderApp();
-    } else if (event.target.id === "filter-price-select") {
-      state.priceFilter = event.target.value;
+  document.addEventListener("click", (event) => {
+    if (state.openDropdown && !event.target.closest(".gsheet-dropdown-container")) {
+      state.openDropdown = null;
       renderApp();
     }
   });
@@ -1940,16 +1978,6 @@ function handleAction(event) {
       break;
     }
     case "locate-device": initInteractiveMap().then(() => locateDevice()); break;
-    case "switch-city": {
-      const cityKey = target.dataset.city;
-      const city = CITIES[cityKey];
-      if (city && mapState.instance) {
-        mapState.instance.setView(city.center, city.zoom, { animate: true });
-        updateMapCaption(`Khu vực: ${city.name}`);
-        showToast(`Đã chuyển sang ${city.name}`, "success");
-      }
-      break;
-    }
     case "fit-saved": {
       const saved = places.filter((p) => isSaved(p.id));
       if (saved.length && mapState.instance && window.L) {
@@ -1959,14 +1987,36 @@ function handleAction(event) {
       }
       break;
     }
+    case "toggle-dropdown": {
+      const dd = target.dataset.dropdown;
+      state.openDropdown = state.openDropdown === dd ? null : dd;
+      renderApp();
+      break;
+    }
+    case "select-category": {
+      state.categoryFilter = target.dataset.value;
+      state.openDropdown = null;
+      renderApp();
+      break;
+    }
+    case "select-price": {
+      state.priceFilter = target.dataset.value;
+      state.openDropdown = null;
+      renderApp();
+      break;
+    }
     case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; renderModal(); break;
     case "copy-place-info": copyPlaceInfo(target.dataset.placeId); break;
     case "native-share-place": nativeSharePlace(target.dataset.placeId); break;
     case "toggle-save": toggleSave(target.dataset.placeId); break;
     case "close-modal": state.modal = null; renderModal(); break;
-    case "filter-category": state.categoryFilter = target.dataset.category; renderApp(); break;
-    case "filter-price": state.priceFilter = target.dataset.price; renderApp(); break;
-    case "reset-saved-filters": state.categoryFilter = "all"; state.priceFilter = "all"; renderApp(); break;
+    case "reset-saved-filters": {
+      state.categoryFilter = "all";
+      state.priceFilter = "all";
+      state.openDropdown = null;
+      renderApp();
+      break;
+    }
     case "trigger-google-login": triggerGooglePrompt(); break;
     case "demo-google-login": loginDemoGoogleUser(); break;
     case "logout-user": logoutUser(); break;
