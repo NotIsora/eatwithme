@@ -56,8 +56,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77097,
-    "lng": 106.70289,
+    "lat": 10.77171,
+    "lng": 106.70363,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 1."
   },
   {
@@ -74,8 +74,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78835,
-    "lng": 106.69,
+    "lat": 10.78888,
+    "lng": 106.6925,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 1."
   },
   {
@@ -92,8 +92,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77808,
-    "lng": 106.70568,
+    "lat": 10.77858,
+    "lng": 106.70526,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -110,8 +110,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77844,
-    "lng": 106.70274,
+    "lat": 10.77767,
+    "lng": 106.70182,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -128,8 +128,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76358,
-    "lng": 106.69173,
+    "lat": 10.76231,
+    "lng": 106.6914,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 1."
   },
   {
@@ -146,8 +146,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.78513,
-    "lng": 106.69671,
+    "lat": 10.78473,
+    "lng": 106.70287,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -164,8 +164,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.77427,
-    "lng": 106.70559,
+    "lat": 10.77341,
+    "lng": 106.70502,
     "description": "Địa điểm ẩm thực Bánh hấp dẫn tại Quận 1."
   },
   {
@@ -182,8 +182,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75259,
-    "lng": 106.66702,
+    "lat": 10.76526,
+    "lng": 106.69054,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 1."
   },
   {
@@ -200,8 +200,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76874,
-    "lng": 106.70062,
+    "lat": 10.77078,
+    "lng": 106.69196,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -218,8 +218,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75933,
-    "lng": 106.68933,
+    "lat": 10.76012,
+    "lng": 106.69017,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -236,8 +236,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78181,
-    "lng": 106.70496,
+    "lat": 10.7792,
+    "lng": 106.70289,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -254,8 +254,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78085,
-    "lng": 106.70069,
+    "lat": 10.77659,
+    "lng": 106.69997,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -272,8 +272,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7631,
-    "lng": 106.68934,
+    "lat": 10.76207,
+    "lng": 106.69017,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 1."
   },
   {
@@ -290,8 +290,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77901,
-    "lng": 106.70305,
+    "lat": 10.77906,
+    "lng": 106.70391,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -308,8 +308,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77777,
-    "lng": 106.70409,
+    "lat": 10.77713,
+    "lng": 106.70244,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -326,8 +326,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76257,
-    "lng": 106.68934,
+    "lat": 10.76179,
+    "lng": 106.69018,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -344,8 +344,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.79303,
-    "lng": 106.69016,
+    "lat": 10.79129,
+    "lng": 106.69258,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -362,8 +362,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76728,
-    "lng": 106.70295,
+    "lat": 10.77256,
+    "lng": 106.69981,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -380,8 +380,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76278,
-    "lng": 106.68882,
+    "lat": 10.7619,
+    "lng": 106.68991,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -398,8 +398,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7771,
-    "lng": 106.70077,
+    "lat": 10.777,
+    "lng": 106.70084,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 1."
   },
   {
@@ -416,8 +416,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77542,
-    "lng": 106.70409,
+    "lat": 10.77722,
+    "lng": 106.70444,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -434,8 +434,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7792,
-    "lng": 106.69382,
+    "lat": 10.77634,
+    "lng": 106.69894,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -452,8 +452,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77742,
-    "lng": 106.70422,
+    "lat": 10.77694,
+    "lng": 106.70251,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -470,8 +470,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76173,
-    "lng": 106.69158,
+    "lat": 10.76636,
+    "lng": 106.69082,
     "description": "Địa điểm ẩm thực Pizza hấp dẫn tại Quận 1."
   },
   {
@@ -488,8 +488,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76176,
-    "lng": 106.6867,
+    "lat": 10.76138,
+    "lng": 106.68882,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận 1."
   },
   {
@@ -506,8 +506,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77806,
-    "lng": 106.70407,
+    "lat": 10.77728,
+    "lng": 106.70243,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -524,8 +524,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7783,
-    "lng": 106.70516,
+    "lat": 10.7774,
+    "lng": 106.70299,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -542,8 +542,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77932,
-    "lng": 106.68552,
+    "lat": 10.78087,
+    "lng": 106.69664,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -560,8 +560,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.77048,
-    "lng": 106.66891,
+    "lat": 10.76573,
+    "lng": 106.66897,
     "description": "Địa điểm ẩm thực Ice cream hấp dẫn tại Quận 1."
   },
   {
@@ -578,8 +578,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78152,
-    "lng": 106.69688,
+    "lat": 10.77921,
+    "lng": 106.69889,
     "description": "Pizza vuông kinda good"
   },
   {
@@ -596,8 +596,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77274,
-    "lng": 106.6985,
+    "lat": 10.77482,
+    "lng": 106.6997,
     "description": "Địa điểm ẩm thực Pizza hấp dẫn tại Quận 1."
   },
   {
@@ -614,8 +614,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77744,
-    "lng": 106.70094,
+    "lat": 10.77825,
+    "lng": 106.70282,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -632,8 +632,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75462,
-    "lng": 106.66261,
+    "lat": 10.76631,
+    "lng": 106.68827,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 1."
   },
   {
@@ -650,8 +650,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77903,
-    "lng": 106.70321,
+    "lat": 10.77777,
+    "lng": 106.70199,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -668,8 +668,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77052,
-    "lng": 106.70424,
+    "lat": 10.77348,
+    "lng": 106.70393,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -686,8 +686,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77677,
-    "lng": 106.70364,
+    "lat": 10.77661,
+    "lng": 106.70221,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -704,8 +704,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.78032,
-    "lng": 106.70315,
+    "lat": 10.77844,
+    "lng": 106.70196,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -722,8 +722,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77844,
-    "lng": 106.70451,
+    "lat": 10.77747,
+    "lng": 106.70266,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -740,8 +740,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.79107,
-    "lng": 106.6897,
+    "lat": 10.78428,
+    "lng": 106.69735,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -758,8 +758,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78479,
-    "lng": 106.69803,
+    "lat": 10.78085,
+    "lng": 106.69946,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -776,8 +776,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76216,
-    "lng": 106.69123,
+    "lat": 10.76158,
+    "lng": 106.69115,
     "description": "Địa điểm ẩm thực Hotpot hấp dẫn tại Quận 1."
   },
   {
@@ -794,8 +794,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76326,
-    "lng": 106.6897,
+    "lat": 10.76715,
+    "lng": 106.68986,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 1."
   },
   {
@@ -812,8 +812,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78163,
-    "lng": 106.70007,
+    "lat": 10.77926,
+    "lng": 106.70048,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 1."
   },
   {
@@ -830,8 +830,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.78021,
-    "lng": 106.70348,
+    "lat": 10.77838,
+    "lng": 106.70213,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -848,8 +848,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7776,
-    "lng": 106.70523,
+    "lat": 10.77704,
+    "lng": 106.70303,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -866,8 +866,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7757,
-    "lng": 106.70376,
+    "lat": 10.77736,
+    "lng": 106.70427,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -884,8 +884,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77836,
-    "lng": 106.70616,
+    "lat": 10.77873,
+    "lng": 106.70551,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -902,8 +902,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77107,
-    "lng": 106.70288,
+    "lat": 10.77176,
+    "lng": 106.70362,
     "description": "Địa điểm ẩm thực Hotpot hấp dẫn tại Quận 1."
   },
   {
@@ -920,8 +920,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7789,
-    "lng": 106.70449,
+    "lat": 10.779,
+    "lng": 106.70465,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -938,8 +938,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77614,
-    "lng": 106.70149,
+    "lat": 10.77389,
+    "lng": 106.69959,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -956,8 +956,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76997,
-    "lng": 106.66817,
+    "lat": 10.77073,
+    "lng": 106.66783,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 1."
   },
   {
@@ -974,8 +974,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78015,
-    "lng": 106.70215,
+    "lat": 10.77852,
+    "lng": 106.70152,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -992,8 +992,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78493,
-    "lng": 106.70132,
+    "lat": 10.78091,
+    "lng": 106.70111,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1010,8 +1010,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77338,
-    "lng": 106.69969,
+    "lat": 10.76597,
+    "lng": 106.68932,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1028,8 +1028,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77048,
-    "lng": 106.70668,
+    "lat": 10.77369,
+    "lng": 106.70379,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1046,8 +1046,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77939,
-    "lng": 106.70129,
+    "lat": 10.77837,
+    "lng": 106.69906,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1064,8 +1064,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77789,
-    "lng": 106.70486,
+    "lat": 10.78615,
+    "lng": 106.69059,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1082,8 +1082,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77847,
-    "lng": 106.7043,
+    "lat": 10.77748,
+    "lng": 106.70255,
     "description": "Địa điểm ẩm thực Pizza hấp dẫn tại Quận 1."
   },
   {
@@ -1100,8 +1100,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77519,
-    "lng": 106.71169,
+    "lat": 10.77574,
+    "lng": 106.70162,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 1."
   },
   {
@@ -1118,8 +1118,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76256,
-    "lng": 106.68993,
+    "lat": 10.76679,
+    "lng": 106.68998,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 1."
   },
   {
@@ -1136,8 +1136,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77514,
-    "lng": 106.70362,
+    "lat": 10.77574,
+    "lng": 106.70041,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1154,8 +1154,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7776,
-    "lng": 106.70558,
+    "lat": 10.77834,
+    "lng": 106.70521,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -1172,8 +1172,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77837,
-    "lng": 106.70395,
+    "lat": 10.77743,
+    "lng": 106.70237,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -1190,8 +1190,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.7738,
-    "lng": 106.70487,
+    "lat": 10.77203,
+    "lng": 106.7048,
     "description": "Địa điểm ẩm thực Bánh hấp dẫn tại Quận 1."
   },
   {
@@ -1208,8 +1208,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77828,
-    "lng": 106.70468,
+    "lat": 10.77869,
+    "lng": 106.70474,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -1226,8 +1226,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76111,
-    "lng": 106.69173,
+    "lat": 10.76104,
+    "lng": 106.6914,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 1."
   },
   {
@@ -1244,8 +1244,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77933,
-    "lng": 106.7057,
+    "lat": 10.77793,
+    "lng": 106.70327,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -1262,8 +1262,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78134,
-    "lng": 106.70476,
+    "lat": 10.77467,
+    "lng": 106.70008,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 1."
   },
   {
@@ -1280,8 +1280,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77751,
-    "lng": 106.70456,
+    "lat": 10.77829,
+    "lng": 106.70468,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 1."
   },
   {
@@ -1298,8 +1298,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7531,
-    "lng": 106.66453,
+    "lat": 10.76552,
+    "lng": 106.68926,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 1."
   },
   {
@@ -1316,8 +1316,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7754,
-    "lng": 106.70262,
+    "lat": 10.77078,
+    "lng": 106.69376,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 1."
   },
   {
@@ -1334,8 +1334,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7534,
-    "lng": 106.66767,
+    "lat": 10.76567,
+    "lng": 106.69087,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận 1."
   },
   {
@@ -1352,8 +1352,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78329,
-    "lng": 106.69473,
+    "lat": 10.77346,
+    "lng": 106.69557,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 1."
   },
   {
@@ -1370,8 +1370,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75352,
-    "lng": 106.6679,
+    "lat": 10.76574,
+    "lng": 106.69099,
     "description": "gelato"
   },
   {
@@ -1388,8 +1388,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76183,
-    "lng": 106.6809,
+    "lat": 10.76094,
+    "lng": 106.68243,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận 1."
   },
   {
@@ -1407,7 +1407,7 @@ const defaultPlaces = [
     "color": "bun",
     "pin": "red",
     "lat": 10.7725,
-    "lng": 106.7054,
+    "lng": 106.70492,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 1."
   },
   {
@@ -1424,8 +1424,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7827,
-    "lng": 106.69684,
+    "lat": 10.77882,
+    "lng": 106.68943,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1442,8 +1442,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.781,
-    "lng": 106.685,
+    "lat": 10.7735,
+    "lng": 106.6805,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1460,8 +1460,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78918,
-    "lng": 106.6843,
+    "lat": 10.78959,
+    "lng": 106.68466,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1478,8 +1478,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77638,
-    "lng": 106.68902,
+    "lat": 10.78731,
+    "lng": 106.6821,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 3."
   },
   {
@@ -1496,8 +1496,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78065,
-    "lng": 106.68348,
+    "lat": 10.78395,
+    "lng": 106.69327,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1514,8 +1514,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78178,
-    "lng": 106.6821,
+    "lat": 10.78412,
+    "lng": 106.69307,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 3."
   },
   {
@@ -1532,8 +1532,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78616,
-    "lng": 106.69053,
+    "lat": 10.78377,
+    "lng": 106.67983,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1550,8 +1550,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77885,
-    "lng": 106.67638,
+    "lat": 10.78768,
+    "lng": 106.68021,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1568,8 +1568,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7897,
-    "lng": 106.6918,
+    "lat": 10.7808,
+    "lng": 106.68652,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 3."
   },
   {
@@ -1586,8 +1586,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78791,
-    "lng": 106.68448,
+    "lat": 10.78594,
+    "lng": 106.68675,
     "description": "bàn ít nên book page"
   },
   {
@@ -1604,8 +1604,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78757,
-    "lng": 106.68849,
+    "lat": 10.78399,
+    "lng": 106.67952,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 3."
   },
   {
@@ -1622,8 +1622,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.79117,
-    "lng": 106.68609,
+    "lat": 10.78711,
+    "lng": 106.68858,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1640,8 +1640,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7859,
-    "lng": 106.69572,
+    "lat": 10.78046,
+    "lng": 106.68886,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 3."
   },
   {
@@ -1658,8 +1658,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.777,
-    "lng": 106.688,
+    "lat": 10.7765,
+    "lng": 106.687,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1676,8 +1676,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77867,
-    "lng": 106.68909,
+    "lat": 10.77736,
+    "lng": 106.68756,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1694,8 +1694,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7771,
-    "lng": 106.68786,
+    "lat": 10.77655,
+    "lng": 106.68693,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1712,8 +1712,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77895,
-    "lng": 106.6878,
+    "lat": 10.7775,
+    "lng": 106.68689,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1730,8 +1730,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78895,
-    "lng": 106.68195,
+    "lat": 10.79019,
+    "lng": 106.68754,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1748,8 +1748,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78114,
-    "lng": 106.68533,
+    "lat": 10.77352,
+    "lng": 106.68055,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1766,8 +1766,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.79116,
-    "lng": 106.68589,
+    "lat": 10.77502,
+    "lng": 106.68063,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 3."
   },
   {
@@ -1784,8 +1784,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77924,
-    "lng": 106.68772,
+    "lat": 10.77974,
+    "lng": 106.67741,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 3."
   },
   {
@@ -1802,8 +1802,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77929,
-    "lng": 106.68923,
+    "lat": 10.78374,
+    "lng": 106.69413,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 3."
   },
   {
@@ -1820,8 +1820,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77248,
-    "lng": 106.68515,
+    "lat": 10.77222,
+    "lng": 106.68052,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 3."
   },
   {
@@ -1838,8 +1838,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77121,
-    "lng": 106.68104,
+    "lat": 10.78253,
+    "lng": 106.69291,
     "description": "bar"
   },
   {
@@ -1856,8 +1856,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78573,
-    "lng": 106.68583,
+    "lat": 10.78671,
+    "lng": 106.69013,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1874,8 +1874,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78274,
-    "lng": 106.68547,
+    "lat": 10.78026,
+    "lng": 106.67707,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 3."
   },
   {
@@ -1892,8 +1892,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.783,
-    "lng": 106.68707,
+    "lat": 10.7893,
+    "lng": 106.68831,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1910,8 +1910,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78616,
-    "lng": 106.69053,
+    "lat": 10.76977,
+    "lng": 106.68033,
     "description": "hỏi a chủ cách ăn"
   },
   {
@@ -1928,8 +1928,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78223,
-    "lng": 106.68453,
+    "lat": 10.78068,
+    "lng": 106.69243,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 3."
   },
   {
@@ -1946,8 +1946,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75226,
-    "lng": 106.70381,
+    "lat": 10.75947,
+    "lng": 106.70215,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 4."
   },
   {
@@ -1964,8 +1964,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75882,
-    "lng": 106.70504,
+    "lat": 10.76065,
+    "lng": 106.70237,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 4."
   },
   {
@@ -1982,8 +1982,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75417,
-    "lng": 106.69979,
+    "lat": 10.75731,
+    "lng": 106.70692,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 4."
   },
   {
@@ -2000,8 +2000,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75483,
-    "lng": 106.7098,
+    "lat": 10.75643,
+    "lng": 106.70522,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 4."
   },
   {
@@ -2018,8 +2018,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75811,
-    "lng": 106.70379,
+    "lat": 10.75702,
+    "lng": 106.70414,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 4."
   },
   {
@@ -2036,8 +2036,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75265,
-    "lng": 106.70703,
+    "lat": 10.75854,
+    "lng": 106.71173,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 4."
   },
   {
@@ -2054,8 +2054,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75718,
-    "lng": 106.6997,
+    "lat": 10.76085,
+    "lng": 106.70541,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 4."
   },
   {
@@ -2072,8 +2072,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76131,
-    "lng": 106.7062,
+    "lat": 10.7596,
+    "lng": 106.70058,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 4."
   },
   {
@@ -2090,8 +2090,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75659,
-    "lng": 106.70965,
+    "lat": 10.75915,
+    "lng": 106.70799,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 4."
   },
   {
@@ -2108,8 +2108,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75674,
-    "lng": 106.70711,
+    "lat": 10.76327,
+    "lng": 106.70224,
     "description": "Địa điểm ẩm thực Hotpot hấp dẫn tại Quận 4."
   },
   {
@@ -2126,8 +2126,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76305,
-    "lng": 106.69654,
+    "lat": 10.76141,
+    "lng": 106.70084,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 4."
   },
   {
@@ -2144,8 +2144,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75702,
-    "lng": 106.71235,
+    "lat": 10.76132,
+    "lng": 106.70518,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 4."
   },
   {
@@ -2162,8 +2162,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75383,
-    "lng": 106.66289,
+    "lat": 10.7539,
+    "lng": 106.66491,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận 5."
   },
   {
@@ -2180,8 +2180,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7562,
-    "lng": 106.66283,
+    "lat": 10.75512,
+    "lng": 106.66488,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 5."
   },
   {
@@ -2198,8 +2198,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75439,
-    "lng": 106.66622,
+    "lat": 10.75156,
+    "lng": 106.66148,
     "description": "Địa điểm ẩm thực Ăn vặt hấp dẫn tại Quận 5."
   },
   {
@@ -2216,8 +2216,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75128,
-    "lng": 106.66173,
+    "lat": 10.75709,
+    "lng": 106.67281,
     "description": "Địa điểm ẩm thực Hotpot hấp dẫn tại Quận 5."
   },
   {
@@ -2234,8 +2234,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75345,
-    "lng": 106.66544,
+    "lat": 10.7537,
+    "lng": 106.66623,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 5."
   },
   {
@@ -2252,8 +2252,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76039,
-    "lng": 106.65853,
+    "lat": 10.75846,
+    "lng": 106.67233,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2270,8 +2270,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75305,
-    "lng": 106.6652,
+    "lat": 10.7535,
+    "lng": 106.66611,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 5."
   },
   {
@@ -2288,8 +2288,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75852,
-    "lng": 106.67228,
+    "lat": 10.75568,
+    "lng": 106.68139,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 5."
   },
   {
@@ -2306,8 +2306,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.74639,
-    "lng": 106.66518,
+    "lat": 10.74986,
+    "lng": 106.65733,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2324,8 +2324,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75567,
-    "lng": 106.66643,
+    "lat": 10.75484,
+    "lng": 106.66673,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 5."
   },
   {
@@ -2342,8 +2342,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75573,
-    "lng": 106.66208,
+    "lat": 10.75487,
+    "lng": 106.6645,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2360,8 +2360,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.7627,
-    "lng": 106.69,
+    "lat": 10.75336,
+    "lng": 106.66802,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2378,8 +2378,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76226,
-    "lng": 106.65861,
+    "lat": 10.75274,
+    "lng": 106.66034,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 5."
   },
   {
@@ -2396,8 +2396,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75214,
-    "lng": 106.66385,
+    "lat": 10.75303,
+    "lng": 106.66541,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2414,8 +2414,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75534,
-    "lng": 106.66577,
+    "lat": 10.75468,
+    "lng": 106.66639,
     "description": "Địa điểm ẩm thực Món Trung hấp dẫn tại Quận 5."
   },
   {
@@ -2432,8 +2432,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76007,
-    "lng": 106.66665,
+    "lat": 10.75591,
+    "lng": 106.68055,
     "description": "mì chay"
   },
   {
@@ -2450,8 +2450,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.75537,
-    "lng": 106.6658,
+    "lat": 10.75521,
+    "lng": 106.68042,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 5."
   },
   {
@@ -2468,8 +2468,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75387,
-    "lng": 106.66346,
+    "lat": 10.75498,
+    "lng": 106.68007,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 5."
   },
   {
@@ -2486,8 +2486,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.75746,
-    "lng": 106.63079,
+    "lat": 10.75072,
+    "lng": 106.64446,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 6."
   },
   {
@@ -2504,8 +2504,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.74776,
-    "lng": 106.64886,
+    "lat": 10.74447,
+    "lng": 106.64378,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 6."
   },
   {
@@ -2522,8 +2522,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7574,
-    "lng": 106.6256,
+    "lat": 10.74571,
+    "lng": 106.64079,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 6."
   },
   {
@@ -2540,8 +2540,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7358,
-    "lng": 106.70817,
+    "lat": 10.72868,
+    "lng": 106.70772,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 7."
   },
   {
@@ -2558,8 +2558,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.74206,
-    "lng": 106.70366,
+    "lat": 10.73903,
+    "lng": 106.70282,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận 7."
   },
   {
@@ -2576,8 +2576,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.73218,
-    "lng": 106.64835,
+    "lat": 10.74892,
+    "lng": 106.68303,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 8."
   },
   {
@@ -2594,8 +2594,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.72129,
-    "lng": 106.64758,
+    "lat": 10.74883,
+    "lng": 106.65996,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 8."
   },
   {
@@ -2612,8 +2612,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.72838,
-    "lng": 106.63882,
+    "lat": 10.74954,
+    "lng": 106.65908,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 8."
   },
   {
@@ -2630,8 +2630,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77203,
-    "lng": 106.66847,
+    "lat": 10.77465,
+    "lng": 106.67522,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2648,8 +2648,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77077,
-    "lng": 106.66885,
+    "lat": 10.77088,
+    "lng": 106.66843,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2666,8 +2666,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76284,
-    "lng": 106.6708,
+    "lat": 10.76628,
+    "lng": 106.67257,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2684,8 +2684,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76401,
-    "lng": 106.66811,
+    "lat": 10.77095,
+    "lng": 106.69217,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2702,8 +2702,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76962,
-    "lng": 106.66824,
+    "lat": 10.77679,
+    "lng": 106.66213,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -2720,8 +2720,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76908,
-    "lng": 106.66381,
+    "lat": 10.76471,
+    "lng": 106.66652,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -2738,8 +2738,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77175,
-    "lng": 106.66397,
+    "lat": 10.76511,
+    "lng": 106.66655,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2756,8 +2756,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77506,
-    "lng": 106.65937,
+    "lat": 10.77261,
+    "lng": 106.69086,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 10."
   },
   {
@@ -2774,8 +2774,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77199,
-    "lng": 106.66836,
+    "lat": 10.77151,
+    "lng": 106.66818,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2792,8 +2792,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.78007,
-    "lng": 106.66605,
+    "lat": 10.77586,
+    "lng": 106.67486,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2810,8 +2810,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77045,
-    "lng": 106.6711,
+    "lat": 10.77072,
+    "lng": 106.6696,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2828,8 +2828,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77148,
-    "lng": 106.66705,
+    "lat": 10.77457,
+    "lng": 106.67501,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -2846,8 +2846,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77463,
-    "lng": 106.67818,
+    "lat": 10.76555,
+    "lng": 106.66868,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2864,8 +2864,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7692,
-    "lng": 106.67012,
+    "lat": 10.76223,
+    "lng": 106.66547,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2882,8 +2882,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77318,
-    "lng": 106.67069,
+    "lat": 10.76712,
+    "lng": 106.66988,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2900,8 +2900,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.77078,
-    "lng": 106.66888,
+    "lat": 10.77089,
+    "lng": 106.66845,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 10."
   },
   {
@@ -2918,8 +2918,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77089,
-    "lng": 106.66778,
+    "lat": 10.77744,
+    "lng": 106.66189,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2936,8 +2936,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77117,
-    "lng": 106.66608,
+    "lat": 10.76609,
+    "lng": 106.66751,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -2954,8 +2954,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77084,
-    "lng": 106.66682,
+    "lat": 10.77248,
+    "lng": 106.67797,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2972,8 +2972,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77936,
-    "lng": 106.66136,
+    "lat": 10.77575,
+    "lng": 106.67415,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -2990,8 +2990,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77033,
-    "lng": 106.66657,
+    "lat": 10.77066,
+    "lng": 106.66727,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3008,8 +3008,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76477,
-    "lng": 106.66521,
+    "lat": 10.76657,
+    "lng": 106.67173,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3026,8 +3026,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76966,
-    "lng": 106.67236,
+    "lat": 10.7623,
+    "lng": 106.6658,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3044,8 +3044,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76538,
-    "lng": 106.65764,
+    "lat": 10.77116,
+    "lng": 106.6906,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3062,8 +3062,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76862,
-    "lng": 106.67007,
+    "lat": 10.77003,
+    "lng": 106.66881,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận 10."
   },
   {
@@ -3080,8 +3080,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76278,
-    "lng": 106.66433,
+    "lat": 10.77077,
+    "lng": 106.6916,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3098,8 +3098,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77181,
-    "lng": 106.665,
+    "lat": 10.78112,
+    "lng": 106.6727,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3116,8 +3116,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77054,
-    "lng": 106.66713,
+    "lat": 10.76576,
+    "lng": 106.66805,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3134,8 +3134,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.76111,
-    "lng": 106.66579,
+    "lat": 10.76202,
+    "lng": 106.66232,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -3152,8 +3152,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77096,
-    "lng": 106.66856,
+    "lat": 10.77098,
+    "lng": 106.66829,
     "description": "Địa điểm ẩm thực Khác hấp dẫn tại Quận 10."
   },
   {
@@ -3170,8 +3170,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.77121,
-    "lng": 106.66582,
+    "lat": 10.77203,
+    "lng": 106.69182,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận 10."
   },
   {
@@ -3188,8 +3188,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76879,
-    "lng": 106.66711,
+    "lat": 10.77087,
+    "lng": 106.65854,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận 10."
   },
   {
@@ -3206,8 +3206,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.80242,
-    "lng": 106.71287,
+    "lat": 10.7712,
+    "lng": 106.67593,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận 10."
   },
   {
@@ -3224,8 +3224,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.76857,
-    "lng": 106.6699,
+    "lat": 10.77625,
+    "lng": 106.66298,
     "description": "siêu nhiều chỗ"
   },
   {
@@ -3242,8 +3242,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.7894,
-    "lng": 106.67848,
+    "lat": 10.7927,
+    "lng": 106.68724,
     "description": "Địa điểm ẩm thực Ăn nhanh hấp dẫn tại Quận Phú Nhuận."
   },
   {
@@ -3260,8 +3260,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.799,
-    "lng": 106.68,
+    "lat": 10.7975,
+    "lng": 106.688,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận Phú Nhuận."
   },
   {
@@ -3278,8 +3278,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.80035,
-    "lng": 106.68865,
+    "lat": 10.79871,
+    "lng": 106.68979,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận Phú Nhuận."
   },
   {
@@ -3296,8 +3296,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.83551,
-    "lng": 106.66825,
+    "lat": 10.82526,
+    "lng": 106.68861,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận Gò Vấp."
   },
   {
@@ -3314,8 +3314,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.85269,
-    "lng": 106.67193,
+    "lat": 10.84347,
+    "lng": 106.65759,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận Gò Vấp."
   },
   {
@@ -3332,8 +3332,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.80902,
-    "lng": 106.71262,
+    "lat": 10.7896,
+    "lng": 106.71136,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận Bình Thạnh."
   },
   {
@@ -3350,8 +3350,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.79324,
-    "lng": 106.65503,
+    "lat": 10.7928,
+    "lng": 106.662,
     "description": "Địa điểm ẩm thực Grill hấp dẫn tại Quận Tân Bình."
   },
   {
@@ -3368,8 +3368,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.78396,
-    "lng": 106.65481,
+    "lat": 10.77476,
+    "lng": 106.64898,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận Tân Bình."
   },
   {
@@ -3386,8 +3386,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.83744,
-    "lng": 106.75386,
+    "lat": 10.77005,
+    "lng": 106.6921,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3404,8 +3404,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.85931,
-    "lng": 106.78816,
+    "lat": 10.80681,
+    "lng": 106.73968,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3422,8 +3422,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.86949,
-    "lng": 106.77611,
+    "lat": 10.80518,
+    "lng": 106.73392,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3440,8 +3440,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.86403,
-    "lng": 106.76367,
+    "lat": 10.80323,
+    "lng": 106.7334,
     "description": "Địa điểm ẩm thực Món Việt hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3458,8 +3458,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.84446,
-    "lng": 106.77188,
+    "lat": 10.80413,
+    "lng": 106.73207,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3476,8 +3476,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.85133,
-    "lng": 106.76093,
+    "lat": 10.80219,
+    "lng": 106.73318,
     "description": "Địa điểm ẩm thực Món Hàn hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3494,8 +3494,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "taco",
     "pin": "coral",
-    "lat": 10.8552,
-    "lng": 106.77326,
+    "lat": 10.80651,
+    "lng": 106.73618,
     "description": "Địa điểm ẩm thực Món Âu hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3512,8 +3512,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "bun",
     "pin": "red",
-    "lat": 10.8543,
-    "lng": 106.78732,
+    "lat": 10.80443,
+    "lng": 106.73634,
     "description": "Địa điểm ẩm thực Món Nhật hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3530,8 +3530,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.78537,
-    "lng": 106.69902,
+    "lat": 10.78719,
+    "lng": 106.69755,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3548,8 +3548,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.77258,
-    "lng": 106.7055,
+    "lat": 10.77254,
+    "lng": 106.70497,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3566,8 +3566,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.76653,
-    "lng": 106.70618,
+    "lat": 10.77644,
+    "lng": 106.69979,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3584,8 +3584,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.78307,
-    "lng": 106.70825,
+    "lat": 10.77343,
+    "lng": 106.6976,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3602,8 +3602,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.80202,
-    "lng": 106.71297,
+    "lat": 10.771,
+    "lng": 106.67598,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3620,8 +3620,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.78909,
-    "lng": 106.69202,
+    "lat": 10.78576,
+    "lng": 106.69704,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận 1."
   },
   {
@@ -3638,8 +3638,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.74573,
-    "lng": 106.65606,
+    "lat": 10.75526,
+    "lng": 106.66146,
     "description": "Khá rộng"
   },
   {
@@ -3656,8 +3656,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.76162,
-    "lng": 106.68661,
+    "lat": 10.75281,
+    "lng": 106.66627,
     "description": "Siêuuu rộng + mở 24/7"
   },
   {
@@ -3674,8 +3674,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.79401,
-    "lng": 106.72093,
+    "lat": 10.7951,
+    "lng": 106.69919,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Bình Thạnh."
   },
   {
@@ -3692,8 +3692,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.849,
-    "lng": 106.771,
+    "lat": 10.804,
+    "lng": 106.735,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3710,8 +3710,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.84419,
-    "lng": 106.75847,
+    "lat": 10.80261,
+    "lng": 106.73647,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3728,8 +3728,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.85624,
-    "lng": 106.78097,
+    "lat": 10.80709,
+    "lng": 106.73532,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3746,8 +3746,8 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.84422,
-    "lng": 106.78283,
+    "lat": 10.80361,
+    "lng": 106.73597,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Thủ Đức."
   },
   {
@@ -3764,33 +3764,44 @@ const defaultPlaces = [
     "status": "open",
     "color": "cafe",
     "pin": "mint",
-    "lat": 10.86979,
-    "lng": 106.7758,
+    "lat": 10.8057,
+    "lng": 106.73539,
     "description": "Địa điểm ẩm thực Cafe hấp dẫn tại Quận Thủ Đức."
   }
 ];
 
-const customPlacesKey = "eatwithme.custom_places.v1";
-let customPlaces = readStorage(customPlacesKey, []);
+function getSavedStorageKey(user = state?.user) {
+  if (user && user.id) return `eatwithme.saved.user_${user.id}`;
+  return "eatwithme.saved.guest";
+}
+
+function getCustomPlacesKey(user = state?.user) {
+  if (user && user.id) return `eatwithme.custom_places.user_${user.id}`;
+  return "eatwithme.custom_places.guest";
+}
+
+const googleUserKey = "eatwithme.google_user.v1";
+const googleClientIdKey = "eatwithme.google_client_id.v1";
+const DEFAULT_GOOGLE_CLIENT_ID = "349760544060-qmj5okegmg2i47dvsfs0msgv5nug099p.apps.googleusercontent.com";
+const locationStorageKey = "eatwithme.location.v1";
+
+const initialUser = readStorage(googleUserKey, null);
+let customPlaces = readStorage(getCustomPlacesKey(initialUser), []);
 let places = [...customPlaces, ...defaultPlaces];
 
 function refreshPlaces() {
-  customPlaces = readStorage(customPlacesKey, []);
+  customPlaces = readStorage(getCustomPlacesKey(state?.user), []);
   places = [...customPlaces, ...defaultPlaces];
 }
 
 const initialSaved = defaultPlaces.map((p) => p.id);
-const storageKey = "eatwithme.saved.v2";
-const locationStorageKey = "eatwithme.location.v1";
-const googleUserKey = "eatwithme.google_user.v1";
-const googleClientIdKey = "eatwithme.google_client_id.v1";
-const DEFAULT_GOOGLE_CLIENT_ID = "349760544060-qmj5okegmg2i47dvsfs0msgv5nug099p.apps.googleusercontent.com";
+const initialSavedData = readStorage(getSavedStorageKey(initialUser), null);
 
 const state = {
   view: "explore", // "explore" | "saved"
   query: "",
-  user: readStorage(googleUserKey, null),
-  saved: readStorage(storageKey, initialSaved),
+  user: initialUser,
+  saved: initialSavedData !== null ? initialSavedData : initialSaved,
   categoryFilter: "all",
   priceFilter: "all",
   openDropdown: null, // "category" | "price" | null
@@ -3800,7 +3811,8 @@ const state = {
 };
 
 function saveLocalState() {
-  saveStorage(storageKey, state.saved);
+  saveStorage(getSavedStorageKey(state.user), state.saved);
+  saveStorage(getCustomPlacesKey(state.user), customPlaces);
 }
 
 const DEFAULT_MAP_CENTER = [10.7769, 106.7009];
@@ -3957,7 +3969,7 @@ function exportBackupData() {
     exportedAt: new Date().toISOString(),
     user: state.user,
     saved: state.saved,
-    customPlaces: readStorage(customPlacesKey, []),
+    customPlaces: readStorage(getCustomPlacesKey(state.user), []),
   };
 
   const jsonStr = JSON.stringify(data, null, 2);
@@ -3985,19 +3997,19 @@ function importBackupFile(file) {
         return;
       }
 
-      if (Array.isArray(data.saved)) {
-        state.saved = data.saved;
-        saveStorage(storageKey, state.saved);
-      }
-
-      if (Array.isArray(data.customPlaces)) {
-        saveStorage(customPlacesKey, data.customPlaces);
-        refreshPlaces();
-      }
-
       if (data.user && typeof data.user === "object") {
         state.user = data.user;
         saveStorage(googleUserKey, state.user);
+      }
+
+      if (Array.isArray(data.saved)) {
+        state.saved = data.saved;
+        saveStorage(getSavedStorageKey(state.user), state.saved);
+      }
+
+      if (Array.isArray(data.customPlaces)) {
+        saveStorage(getCustomPlacesKey(state.user), data.customPlaces);
+        refreshPlaces();
       }
 
       saveLocalState();
@@ -5025,7 +5037,7 @@ async function initInteractiveMap() {
     const L = await loadLeaflet();
     if (!L) throw new Error("Leaflet unavailable");
     buildInteractiveMap(L);
-    if (!mapState.hasLocatedUser) locateDevice({ silent: true });
+    // Map stays focused on TP. HCM default view unless user taps Locate
   } catch {
     mapState.leafletPromise = null;
     showMapFallback("Không tải được bản đồ online · đang dùng bản đồ dự phòng");
@@ -5099,15 +5111,25 @@ function triggerGooglePrompt() {
 }
 
 function loginDemoGoogleUser() {
-  state.user = {
+  const user = {
     id: "demo-google-user-01",
     name: "An Trần (Google)",
     email: "antran.foodie@gmail.com",
     picture: "https://lh3.googleusercontent.com/a/default-user=s96-c",
     loggedAt: new Date().toISOString(),
   };
-  saveStorage(googleUserKey, state.user);
-  saveLocalState();
+  state.user = user;
+  saveStorage(googleUserKey, user);
+  
+  // Dùng dữ liệu của user nếu có, nếu chưa có thì nạp 207 quán mặc định
+  const userSaved = readStorage(getSavedStorageKey(user), null);
+  if (userSaved !== null) {
+    state.saved = userSaved;
+  } else {
+    state.saved = defaultPlaces.map((p) => p.id);
+    saveStorage(getSavedStorageKey(user), state.saved);
+  }
+  refreshPlaces();
   state.modal = null;
   renderApp();
   showToast(`Chào mừng ${state.user.name} đã đăng nhập!`, "success");
@@ -5117,15 +5139,25 @@ function handleGoogleCredentialResponse(response) {
   if (!response?.credential) return;
   const payload = parseJwt(response.credential);
   if (payload && payload.email) {
-    state.user = {
+    const user = {
       id: payload.sub,
       name: payload.name || payload.email.split("@")[0],
       email: payload.email,
       picture: payload.picture || "https://lh3.googleusercontent.com/a/default-user=s96-c",
       loggedAt: new Date().toISOString(),
     };
-    saveStorage(googleUserKey, state.user);
-    saveLocalState();
+    state.user = user;
+    saveStorage(googleUserKey, user);
+
+    // Dùng dữ liệu của user nếu có, nếu chưa có thì nạp 207 quán mặc định
+    const userSaved = readStorage(getSavedStorageKey(user), null);
+    if (userSaved !== null) {
+      state.saved = userSaved;
+    } else {
+      state.saved = defaultPlaces.map((p) => p.id);
+      saveStorage(getSavedStorageKey(user), state.saved);
+    }
+    refreshPlaces();
     state.modal = null;
     renderApp();
     showToast(`Chào mừng ${state.user.name}!`, "success");
@@ -5141,10 +5173,14 @@ function logoutUser() {
       window.google.accounts.id.disableAutoSelect();
     }
   } catch {}
-  saveLocalState();
+
+  // Quay về danh sách quán mặc định khi chưa login
+  const guestSaved = readStorage(getSavedStorageKey(null), null);
+  state.saved = guestSaved !== null ? guestSaved : defaultPlaces.map((p) => p.id);
+  refreshPlaces();
   state.modal = null;
   renderApp();
-  showToast("Đã đăng xuất tài khoản thành công", "success");
+  showToast("Đã đăng xuất, chuyển về danh sách mặc định", "success");
 }
 
 function saveGoogleClientId() {
@@ -5432,9 +5468,9 @@ function submitNewPlace() {
     isCustom: true,
   };
 
-  const existingCustom = readStorage(customPlacesKey, []);
+  const existingCustom = readStorage(getCustomPlacesKey(state.user), []);
   existingCustom.unshift(newPlace);
-  saveStorage(customPlacesKey, existingCustom);
+  saveStorage(getCustomPlacesKey(state.user), existingCustom);
 
   places = [newPlace, ...places.filter((p) => p.id !== newPlace.id)];
 
