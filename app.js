@@ -6,12 +6,11 @@ const ICONS = {
   share: "↗",
   bookmark: "♡",
   bookmarkFill: "♥",
+  trash: "✕",
   more: "⋯",
   close: "×",
   arrow: "→",
   check: "✓",
-  copy: "📋",
-  mapPin: "📍",
 };
 
 const FOOD_CATEGORIES = [
@@ -361,7 +360,7 @@ function importBackupFile(file) {
 
       saveLocalState();
       renderApp();
-      showToast("Đã phục hồi dữ liệu từ file thành công! 🎉", "success");
+      showToast("Đã phục hồi dữ liệu từ file thành công!", "success");
     } catch (err) {
       showToast("Lỗi khi đọc file sao lưu: " + err.message, "error");
     }
@@ -500,7 +499,7 @@ function renderSidebar() {
   const userCaption = state.user?.email ? `<span style="color:var(--herb);font-weight:600;">● Google</span>` : `Dữ liệu lưu trên máy`;
   return `
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark">♨</div><div class="brand-name">Eat<span>With</span>Me</div></div>
+      <div class="brand"><div class="brand-mark">E</div><div class="brand-name">Eat<span>With</span>Me</div></div>
       <div class="nav-label">Không gian ẩm thực</div>
       <nav class="nav" aria-label="Điều hướng chính">
         ${nav.map(([view, iconName, label]) => `<button class="nav-button ${state.view === view ? "active" : ""}" data-action="navigate" data-view="${view}"><span class="icon">${icon(iconName)}</span><span>${label}</span></button>`).join("")}
@@ -517,7 +516,7 @@ function renderSidebar() {
           ${
             state.user
               ? `<button type="button" class="round-button" data-action="logout-user" title="Đăng xuất" aria-label="Đăng xuất" style="width:36px;height:36px;font-size:11px;flex-shrink:0;color:var(--coral-dark);">
-                  ⎋
+                  OUT
                 </button>`
               : ""
           }
@@ -616,37 +615,43 @@ function renderSaved() {
       <button class="primary-button" data-action="open-add-place">${icon("add")} Thêm quán mới</button>
     </div>
 
-    <!-- Bộ lọc Loại món ăn & Mức giá -->
-    <div class="saved-filter-container">
-      <div class="filter-section">
-        <span class="filter-section-title">Loại món:</span>
-        <div class="filter-pills-scroll">
-          <button class="filter-pill ${state.categoryFilter === "all" ? "active" : ""}" data-action="filter-category" data-category="all">
-            Tất cả món (${savedPlaces.length})
-          </button>
-          ${FOOD_CATEGORIES.map((cat) => {
-            const count = savedPlaces.filter((p) => (p.category || "").toLowerCase() === cat.name.toLowerCase()).length;
-            return `<button class="filter-pill ${state.categoryFilter === cat.name ? "active" : ""}" data-action="filter-category" data-category="${escapeHtml(cat.name)}" style="${state.categoryFilter === cat.name ? `background:${cat.bg};color:${cat.color};border-color:${cat.color};font-weight:700;` : ""}">
-              ${escapeHtml(cat.name)}${count > 0 ? ` (${count})` : ""}
-            </button>`;
-          }).join("")}
+    <!-- Bộ lọc dạng Dropdown Google Sheets -->
+    <div class="saved-filter-bar">
+      <div class="filter-dropdown-group">
+        <label for="filter-category-select" class="filter-label">Loại món:</label>
+        <div class="select-wrapper">
+          <select id="filter-category-select" class="filter-select" data-action="change-filter-category">
+            <option value="all" ${state.categoryFilter === "all" ? "selected" : ""}>Tất cả món (${savedPlaces.length})</option>
+            ${FOOD_CATEGORIES.map((cat) => {
+              const count = savedPlaces.filter((p) => (p.category || "").toLowerCase() === cat.name.toLowerCase()).length;
+              return `<option value="${escapeHtml(cat.name)}" ${state.categoryFilter === cat.name ? "selected" : ""}>${escapeHtml(cat.name)}${count > 0 ? ` (${count})` : ""}</option>`;
+            }).join("")}
+          </select>
+          <span class="select-chevron">▾</span>
         </div>
       </div>
 
-      <div class="filter-section">
-        <span class="filter-section-title">Mức giá:</span>
-        <div class="filter-pills-scroll">
-          <button class="filter-pill ${state.priceFilter === "all" ? "active" : ""}" data-action="filter-price" data-price="all">
-            Tất cả giá
-          </button>
-          ${PRICE_TIERS.map((tier) => {
-            const count = savedPlaces.filter((p) => (p.price || "").toLowerCase() === tier.name.toLowerCase()).length;
-            return `<button class="filter-pill ${state.priceFilter === tier.name ? "active" : ""}" data-action="filter-price" data-price="${escapeHtml(tier.name)}" style="${state.priceFilter === tier.name ? `background:${tier.bg};color:${tier.color};border-color:${tier.color};font-weight:700;` : ""}">
-              ${escapeHtml(tier.name)}${count > 0 ? ` (${count})` : ""}
-            </button>`;
-          }).join("")}
+      <div class="filter-dropdown-group">
+        <label for="filter-price-select" class="filter-label">Mức giá:</label>
+        <div class="select-wrapper">
+          <select id="filter-price-select" class="filter-select" data-action="change-filter-price">
+            <option value="all" ${state.priceFilter === "all" ? "selected" : ""}>Tất cả giá</option>
+            ${PRICE_TIERS.map((tier) => {
+              const count = savedPlaces.filter((p) => (p.price || "").toLowerCase() === tier.name.toLowerCase()).length;
+              return `<option value="${escapeHtml(tier.name)}" ${state.priceFilter === tier.name ? "selected" : ""}>${escapeHtml(tier.name)}${count > 0 ? ` (${count})` : ""}</option>`;
+            }).join("")}
+          </select>
+          <span class="select-chevron">▾</span>
         </div>
       </div>
+
+      ${
+        state.categoryFilter !== "all" || state.priceFilter !== "all"
+          ? `<button type="button" class="filter-reset-btn" data-action="reset-saved-filters">
+              Đặt lại
+            </button>`
+          : ""
+      }
     </div>
 
     <section class="panel">
@@ -663,13 +668,13 @@ function renderSaved() {
           : savedPlaces.length === 0
           ? `
           <div class="empty-state">
-            <div class="empty-mark">♨</div>
+            <div class="empty-mark">—</div>
             <h3>Danh sách đang trống</h3>
             <p>Hãy lưu địa điểm từ màn hình Khám phá hoặc bấm nút "Thêm quán mới" ở góc trên để tự thêm quán bạn yêu thích.</p>
           </div>`
           : `
           <div class="empty-state">
-            <div class="empty-mark">⌕</div>
+            <div class="empty-mark">—</div>
             <h3>Không có quán phù hợp bộ lọc</h3>
             <p>Không tìm thấy quán đã lưu nào phù hợp với tùy chọn lọc hiện tại.</p>
             <button class="secondary-button" data-action="reset-saved-filters" style="margin-top:12px;margin-inline:auto;">
@@ -683,7 +688,7 @@ function renderSaved() {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <div>
           <h3 style="font-size:14px;margin:0 0 3px;display:flex;align-items:center;gap:6px;">
-            <span>💾</span> Quản lý dữ liệu lưu trên máy
+            Quản lý dữ liệu lưu trên máy
           </h3>
           <p style="font-size:12px;color:var(--ink-muted);margin:0;">
             Đã lưu ${state.saved.length} quán ăn (${customPlaces.length} quán tự thêm) · Bộ nhớ máy được bảo vệ chống xóa ngầm
@@ -1297,7 +1302,7 @@ async function locateDevice({ silent = false } = {}) {
       mapState.instance.setView(pt, MAP_DEFAULT_ZOOM, { animate: true });
 
       if (err?.code === 1) {
-        const msg = "Nhấn biểu tượng 🔒 trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
+        const msg = "Nhấn biểu tượng cài đặt trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
         updateMapCaption(`Chưa cấp quyền GPS · đang hiển thị khu vực ${escapeHtml(ip.city)}`);
         if (!silent) showToast(msg, "error");
       } else {
@@ -1510,7 +1515,7 @@ function renderProfileModal() {
                 <div style="min-width:0;flex:1;">
                   <h2 style="font-size:18px;margin:0 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.name)}</h2>
                   <p class="muted" style="font-size:12px;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.user.email || "")}</p>
-                  <span class="google-sync-tag">✓ Đã liên kết Google</span>
+                  <span class="google-sync-tag">Đã liên kết Google</span>
                 </div>
               </div>`
               : `
@@ -1539,7 +1544,7 @@ function renderProfileModal() {
             ${
               isLogged
                 ? `<button type="button" class="primary-button" data-action="logout-user" style="width:100%;justify-content:center;background:var(--coral);border-color:var(--coral);">
-                    ⎋ Đăng xuất tài khoản
+                    Đăng xuất tài khoản
                   </button>`
                 : `
                 <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:8px;"></div>
@@ -1811,15 +1816,15 @@ function renderShareModal(placeId) {
           
           <div style="display:grid;gap:10px;margin:18px 0;">
             <button class="primary-button" data-action="copy-place-info" data-place-id="${place.id}" style="justify-content:center;display:flex;align-items:center;gap:8px;">
-              ${icon("copy")} Sao chép thông tin quán
+              ${icon("share")} Sao chép tên và địa chỉ
             </button>
             <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="secondary-button" style="justify-content:center;display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;">
-              ${icon("mapPin")} Mở trên Google Maps
+              ${icon("compass")} Mở trên Google Maps
             </a>
             ${
               navigator.share
                 ? `<button class="secondary-button" data-action="native-share-place" data-place-id="${place.id}" style="justify-content:center;display:flex;align-items:center;gap:8px;">
-                    ${icon("share")} Gửi qua Zalo, Tin nhắn...
+                    ${icon("share")} Gửi qua ứng dụng khác
                   </button>`
                 : ""
             }
@@ -1836,12 +1841,11 @@ function renderShareModal(placeId) {
 function copyPlaceInfo(placeId) {
   const place = getPlace(placeId);
   if (!place) return;
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.address}`)}`;
-  const text = `🍜 ${place.name}\n📍 Địa chỉ: ${place.address}\n🏷️ Loại món: ${place.category} · Giá: ${place.price || "<100k"}\n⏰ Giờ mở: ${place.hours}\n⭐ Đánh giá: ★${place.rating}\n🗺️ Bản đồ: ${mapsUrl}`;
+  const text = `${place.name} - ${place.address}`;
 
   if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast(`Đã sao chép thông tin ${place.name}!`, "success");
+      showToast(`Đã sao chép: ${text}`, "success");
     }).catch(() => {
       showToast("Không thể sao chép tự động", "error");
     });
@@ -1857,7 +1861,7 @@ async function nativeSharePlace(placeId) {
   try {
     await navigator.share({
       title: place.name,
-      text: `Gợi ý quán ăn ngon: ${place.name} - ${place.address} (${place.category})`,
+      text: `${place.name} - ${place.address}`,
       url: mapsUrl,
     });
   } catch {
@@ -1878,6 +1882,15 @@ function bindAppEvents() {
   app.querySelector("#import-backup-input")?.addEventListener("change", (event) => {
     const file = event.target.files?.[0];
     if (file) importBackupFile(file);
+  });
+  app.addEventListener("change", (event) => {
+    if (event.target.id === "filter-category-select") {
+      state.categoryFilter = event.target.value;
+      renderApp();
+    } else if (event.target.id === "filter-price-select") {
+      state.priceFilter = event.target.value;
+      renderApp();
+    }
   });
   app.addEventListener("click", handleAction);
 }
