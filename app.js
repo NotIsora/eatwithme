@@ -533,31 +533,6 @@ function renderMobileTabbar() {
   return `<nav class="mobile-tabbar" aria-label="Điều hướng trên điện thoại">${nav.map(([view, iconName, label]) => `<button class="mobile-tab ${state.view === view ? "active" : ""}" data-action="navigate" data-view="${view}"><span class="mobile-tab-icon">${icon(iconName)}</span><span>${label}</span></button>`).join("")}</nav>`;
 }
 
-function renderHero() {
-  return `
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow">Hôm nay ăn gì?</div>
-        <h1>Đi tìm một nơi<br /><em>đáng nhớ.</em></h1>
-        <p>Gom những quán bạn yêu, những món bạn muốn thử và những hương vị tuyệt vời nhất.</p>
-        <div class="hero-actions">
-          <button class="primary-button" data-action="focus-search">Tìm quán gần bạn ${icon("arrow")}</button>
-          <button class="secondary-button" data-action="navigate" data-view="saved">Mở quán đã lưu (${state.saved.length})</button>
-        </div>
-      </div>
-      <div class="hero-aside">
-        <div class="eyebrow">Bản đồ ẩm thực cá nhân</div>
-        <h3>Lưu lại từng quán ăn bạn yêu thích.</h3>
-        <p>Đã lưu ${state.saved.length} quán ăn. Bạn có thể tự ghim thêm địa điểm vào kho ẩm thực.</p>
-        <div style="display:flex;gap:8px;margin-top:14px;">
-          <button class="secondary-button" data-action="open-add-place" style="font-size:12.5px;padding:8px 14px;">
-            ${icon("add")} Thêm quán mới
-          </button>
-        </div>
-      </div>
-    </section>`;
-}
-
 function renderMapFallback() {
   const savedPlaces = places.filter((place) => isSaved(place.id));
   return `<div id="map-fallback" class="map-fallback hidden"><div class="map-surface">${savedPlaces.map((place) => `<button class="map-pin ${place.pin}" data-action="open-place" data-place-id="${place.id}" aria-label="Mở ${escapeHtml(place.name)}"><span>●</span></button>`).join("")}<span class="map-label one">Hai Bà Trưng</span><span class="map-label two">Hoàn Kiếm</span><span class="map-label three">Tràng Tiền</span><span class="map-label four">Phan Bội Châu</span></div></div>`;
@@ -587,7 +562,7 @@ function renderSearchPanel() {
 }
 
 function renderExplore() {
-  return `${renderHero()}${renderSearchPanel()}${renderMap()}`;
+  return `${renderSearchPanel()}${renderMap()}`;
 }
 
 function renderSaved() {
