@@ -1,4 +1,4 @@
-# ♨ EatWithMe — Bản Đồ Ẩm Thực Cá Nhân (Local-First Food Map)
+# EatWithMe — Bản Đồ Ẩm Thực Cá Nhân (Local-First Food Map)
 
 Một ứng dụng web/PWA mobile-first hiện đại giúp bạn tìm kiếm, lưu trữ, ghim bản đồ và quản lý những quán ăn yêu thích của riêng mình.
 
@@ -6,28 +6,28 @@ Một ứng dụng web/PWA mobile-first hiện đại giúp bạn tìm kiếm, l
 
 ---
 
-## 🚀 Trải nghiệm trực tiếp
+## Trải nghiệm trực tiếp
 
 * **GitHub Pages**: [https://notisora.github.io/eatwithme/](https://notisora.github.io/eatwithme/)
 * **Vercel**: Tự động triển khai dưới dạng static web/PWA app không cần serverless functions.
 
 ---
 
-## 🌟 Các tính năng nổi bật
+## Các tính năng nổi bật
 
 ### 1. Bản đồ ẩm thực tương tác & Tự thêm quán ăn
 * **Bản đồ tương tác dịu mắt**: Tích hợp Leaflet + CartoDB Positron tông màu nhẹ nhàng, giới hạn mức zoom tối ưu (11 – 17), chỉ hiển thị tên đường và các quán ghim.
 * **16 danh mục món ăn trực quan**: Món Nhật, Món Âu, Món Hàn, Ăn nhanh, Món Việt, Ăn vặt, Hotpot, Grill, Hải sản, Cafe, Dining, Bánh, Ice cream, Pizza, Món Trung, Khác.
 * **6 phân khúc giá rõ ràng**: `<100k`, `<200k`, `200k-300k`, `<500k`, `500k-800k`, `>1tr`.
-* **Thêm quán ăn bằng tay**: Nhập tên, chọn dạng món, mức giá, ghi chú và ghim trực tiếp theo tọa độ GPS hiện tại hoặc nhập thủ công.
+* **Thêm quán ăn bằng tay**: Nhập tên, chọn dạng món, mức giá và ghim trực tiếp theo tọa độ GPS hiện tại hoặc nhập thủ công.
 
 ### 2. Lưu trữ Cục bộ (Local-First) & Sao lưu 1-Click
 * **Bảo vệ dữ liệu bền vững**: Kết hợp `LocalStorage` và `IndexedDB` với cơ chế `navigator.storage.persist()` chống trình duyệt tự động dọn dẹp khi đầy bộ nhớ.
-* **Sao lưu & Phục hồi JSON**: Xuất toàn bộ danh sách quán ăn, ghi chú và hồ sơ ra file `.json` hoặc khôi phục lại bất cứ lúc nào trên mọi thiết bị.
-* **Quyền riêng tư tối đa**: Không gửi dữ liệu quán ăn, ghi chú của bạn lên bất kỳ máy chủ bên thứ ba nào.
+* **Sao lưu & Phục hồi JSON**: Xuất toàn bộ danh sách quán ăn và hồ sơ ra file `.json` hoặc khôi phục lại bất cứ lúc nào trên mọi thiết bị.
+* **Quyền riêng tư tối đa**: Không gửi dữ liệu quán ăn của bạn lên bất kỳ máy chủ bên thứ ba nào.
 
 ### 3. Chia sẻ nhanh chóng
-* **Sao chép thông tin quán 1-chạm**: Tự động định dạng tên quán, địa chỉ, loại món, giá và kèm link Google Maps vào clipboard để gửi qua Zalo, Messenger, SMS...
+* **Sao chép thông tin quán 1-chạm**: Tự động sao chép tên quán và địa chỉ vào clipboard để gửi qua Zalo, Messenger, SMS...
 * **Mở trực tiếp trên Google Maps**: Xem chỉ đường tức thì với một chạm.
 * **Hỗ trợ Web Share API**: Chia sẻ trực tiếp qua bảng chia sẻ của hệ điều hành.
 
@@ -37,7 +37,7 @@ Một ứng dụng web/PWA mobile-first hiện đại giúp bạn tìm kiếm, l
 
 ---
 
-## 🛠 Hướng dẫn chạy và Triển khai
+## Hướng dẫn chạy và Triển khai
 
 ### 1. Chạy trên máy cá nhân (Local Development)
 
