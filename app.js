@@ -615,7 +615,6 @@ function renderSaved() {
           <h2>Danh sách quán ăn</h2>
           <p>${filtered.length} địa điểm đã lưu</p>
         </div>
-        <button class="text-button" data-action="open-add-place">+ Thêm địa điểm</button>
       </div>
       ${
         filtered.length
@@ -624,10 +623,7 @@ function renderSaved() {
           <div class="empty-state">
             <div class="empty-mark">♨</div>
             <h3>Danh sách đang trống</h3>
-            <p>Hãy lưu địa điểm từ màn hình Khám phá hoặc tự thêm quán ăn bạn yêu thích.</p>
-            <button class="primary-button" data-action="open-add-place" style="margin-top:14px">
-              ${icon("add")} Thêm quán ăn
-            </button>
+            <p>Hãy lưu địa điểm từ màn hình Khám phá hoặc bấm nút "Thêm quán mới" ở góc trên để tự thêm quán bạn yêu thích.</p>
           </div>`
       }
     </section>
