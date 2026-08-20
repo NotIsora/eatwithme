@@ -3808,6 +3808,7 @@ const state = {
   modal: null,
   toastTimer: null,
   installAvailable: false,
+  pendingPlaceDraft: null,
 };
 
 function saveLocalState() {
@@ -3853,6 +3854,10 @@ const NATIVE_PRECISE_LOCATION_OPTIONS = {
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
 
+const GEOCODE_API_URL = "https://photon.komoot.io/api/";
+const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+
 const mapState = {
   instance: null,
   userMarker: null,
@@ -3866,7 +3871,106 @@ const mapState = {
   leafletPromise: null,
   locationPending: false,
   hasLocatedUser: false,
+  isPickingLocation: false,
+  lastGeocodeResults: [],
 };
+
+async function geocodeLocation(query, options = {}) {
+  const q = (query || "").trim();
+  if (!q) return [];
+
+  const lat = options.lat || (mapState.userPosition ? mapState.userPosition[0] : DEFAULT_MAP_CENTER[0]);
+  const lng = options.lng || (mapState.userPosition ? mapState.userPosition[1] : DEFAULT_MAP_CENTER[1]);
+
+  // 1. Try Photon (OpenStreetMap geocoding API)
+  try {
+    const url = `${GEOCODE_API_URL}?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=6`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.features && data.features.length > 0) {
+        return data.features.map((f) => {
+          const props = f.properties || {};
+          const coords = f.geometry?.coordinates || [lng, lat];
+          const parts = [
+            props.name,
+            props.housenumber ? `${props.housenumber} ${props.street || ""}`.trim() : props.street,
+            props.district || props.suburb || props.locality,
+            props.city || props.state || "TP. Hồ Chí Minh"
+          ].filter(Boolean);
+          const fullAddress = Array.from(new Set(parts)).join(", ");
+          return {
+            name: props.name || props.street || q,
+            address: fullAddress || q,
+            lat: Number(coords[1].toFixed(5)),
+            lng: Number(coords[0].toFixed(5)),
+            district: props.district || props.suburb || "",
+          };
+        });
+      }
+    }
+  } catch {
+    // Fallback to Nominatim
+  }
+
+  // 2. Fallback to OpenStreetMap Nominatim
+  try {
+    const nomUrl = `${NOMINATIM_SEARCH_URL}?q=${encodeURIComponent(q + ", Hồ Chí Minh, Việt Nam")}&format=json&addressdetails=1&limit=5&countrycodes=vn`;
+    const res = await fetch(nomUrl, {
+      headers: { "Accept": "application/json", "User-Agent": "EatWithMeApp/1.0" },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item) => ({
+          name: item.name || item.display_name?.split(",")[0] || q,
+          address: item.display_name,
+          lat: Number(parseFloat(item.lat).toFixed(5)),
+          lng: Number(parseFloat(item.lon).toFixed(5)),
+          district: item.address?.suburb || item.address?.district || "",
+        }));
+      }
+    }
+  } catch {
+    //
+  }
+
+  return [];
+}
+
+async function reverseGeocodeLocation(lat, lng) {
+  try {
+    const url = `${NOMINATIM_REVERSE_URL}?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json", "User-Agent": "EatWithMeApp/1.0" },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+      const road = addr.road || addr.street || "";
+      const houseNumber = addr.house_number || "";
+      const suburb = addr.suburb || addr.quarter || addr.district || "";
+      const city = addr.city || addr.state || "TP. Hồ Chí Minh";
+      const parts = [
+        houseNumber ? `${houseNumber} ${road}`.trim() : road,
+        suburb,
+        city
+      ].filter(Boolean);
+      return {
+        formattedAddress: parts.join(", ") || data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        district: suburb,
+      };
+    }
+  } catch {
+    //
+  }
+  return {
+    formattedAddress: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    district: "",
+  };
+}
 
 function readStorage(key, fallback) {
   try {
@@ -4535,6 +4639,12 @@ function buildInteractiveMap(L) {
   tiles.once("load", () => {
     mapState.tilesLoaded = true;
     if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
+  });
+
+  map.on("click", (e) => {
+    if (mapState.isPickingLocation) {
+      onMapClickPickLocation(e.latlng);
+    }
   });
 
   let saved = places.filter((place) => isSaved(place.id));
@@ -5323,30 +5433,37 @@ function renderProfileModal() {
 }
 
 function renderAddPlaceModal() {
-  const currentCoords = mapState.userPosition || DEFAULT_MAP_CENTER;
+  const draft = state.pendingPlaceDraft || {};
+  const currentCoords = [
+    draft.lat != null ? draft.lat : (mapState.userPosition ? mapState.userPosition[0] : DEFAULT_MAP_CENTER[0]),
+    draft.lng != null ? draft.lng : (mapState.userPosition ? mapState.userPosition[1] : DEFAULT_MAP_CENTER[1]),
+  ];
+  const initialCat = draft.category || "Món Việt";
+  const initialPrice = draft.price || "<100k";
+
   return `
     <div class="modal-backdrop" data-action="close-modal">
-      <article class="modal" role="dialog" aria-modal="true" aria-label="Thêm quán ăn mới" data-modal-card style="max-width:480px;">
+      <article class="modal" role="dialog" aria-modal="true" aria-label="Thêm quán ăn mới" data-modal-card style="max-width:500px;">
         <div class="modal-content">
           <div class="eyebrow">Thêm địa điểm vào kho ẩm thực</div>
           <h2>Thêm quán ăn mới</h2>
-          <p class="muted">Chọn dạng đồ ăn và mức giá phù hợp để ghim lên bản đồ.</p>
+          <p class="muted">Kết nối trực tiếp API bản đồ để định vị tọa độ và ghim lên bản đồ.</p>
 
           <form id="add-place-form" onsubmit="event.preventDefault();" style="display:grid;gap:13px;margin-top:14px;">
             <div class="form-group">
               <label for="new-place-name">Tên quán ăn / Địa điểm <span style="color:var(--coral)">*</span></label>
-              <input id="new-place-name" class="form-input" type="text" placeholder="Ví dụ: Phở Bát Đàn, Sushi Kei, Pizza 4P's..." required autofocus />
+              <input id="new-place-name" class="form-input" type="text" value="${escapeHtml(draft.name || "")}" placeholder="Ví dụ: Phở Hòa Pasteur, Pizza 4P's, Cơm tấm Cali..." required autofocus />
             </div>
 
             <div class="picker-section">
               <div class="picker-label-row">
                 <label>Dạng đồ ăn <span style="color:var(--coral)">*</span></label>
-                <span id="selected-category-badge" class="picker-label-badge">Đang chọn: <strong>Món Việt</strong></span>
+                <span id="selected-category-badge" class="picker-label-badge">Đang chọn: <strong>${escapeHtml(initialCat)}</strong></span>
               </div>
-              <input id="new-place-category" type="hidden" value="Món Việt" />
+              <input id="new-place-category" type="hidden" value="${escapeHtml(initialCat)}" />
               <div class="category-pill-grid">
-                ${FOOD_CATEGORIES.map((cat, idx) => `
-                  <button type="button" class="food-select-pill ${idx === 4 ? "selected" : ""}" data-action="pick-food-category" data-val="${cat.name}" style="background:${cat.bg};color:${cat.color};${cat.border ? `border:1px solid ${cat.border};` : ""}">
+                ${FOOD_CATEGORIES.map((cat) => `
+                  <button type="button" class="food-select-pill ${cat.name === initialCat ? "selected" : ""}" data-action="pick-food-category" data-val="${cat.name}" style="background:${cat.bg};color:${cat.color};${cat.border ? `border:1px solid ${cat.border};` : ""}">
                     ${escapeHtml(cat.name)}
                   </button>
                 `).join("")}
@@ -5356,44 +5473,58 @@ function renderAddPlaceModal() {
             <div class="picker-section">
               <div class="picker-label-row">
                 <label>Mức giá tiền <span style="color:var(--coral)">*</span></label>
-                <span id="selected-price-badge" class="picker-label-badge">Đang chọn: <strong>&lt;100k</strong></span>
+                <span id="selected-price-badge" class="picker-label-badge">Đang chọn: <strong>${escapeHtml(initialPrice)}</strong></span>
               </div>
-              <input id="new-place-price" type="hidden" value="<100k" />
+              <input id="new-place-price" type="hidden" value="${escapeHtml(initialPrice)}" />
               <div class="price-pill-grid">
-                ${PRICE_TIERS.map((tier, idx) => `
-                  <button type="button" class="food-select-pill ${idx === 0 ? "selected" : ""}" data-action="pick-price-tier" data-val="${tier.name}" style="background:${tier.bg};color:${tier.color};">
+                ${PRICE_TIERS.map((tier) => `
+                  <button type="button" class="food-select-pill ${tier.name === initialPrice ? "selected" : ""}" data-action="pick-price-tier" data-val="${tier.name}" style="background:${tier.bg};color:${tier.color};">
                     ${escapeHtml(tier.name)}
                   </button>
                 `).join("")}
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="new-place-address">Địa chỉ / Khu vực</label>
-              <input id="new-place-address" class="form-input" type="text" placeholder="Ví dụ: 49 Bát Đàn, Hoàn Kiếm, Hà Nội" />
+            <div class="form-group geosearch-container">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <label for="new-place-address">Địa chỉ / Tên đường</label>
+                <span id="geocode-status-badge">${draft.lat != null ? `<span class="geosearch-status success">✓ Tọa độ: ${draft.lat}, ${draft.lng}</span>` : ""}</span>
+              </div>
+              <div class="geosearch-input-row">
+                <input id="new-place-address" class="form-input" type="text" value="${escapeHtml(draft.address || "")}" placeholder="Ví dụ: 260C Pasteur, Phường 8, Quận 3" style="flex:1;" />
+                <button type="button" id="geosearch-btn" class="geosearch-btn" data-action="geocode-address">
+                  ${icon("search")} Định vị API
+                </button>
+              </div>
+              <div id="geosearch-results"></div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="form-group">
                 <label for="new-place-hours">Giờ mở cửa</label>
-                <input id="new-place-hours" class="form-input" type="text" value="07:00 – 22:00" placeholder="07:00 – 22:00" />
+                <input id="new-place-hours" class="form-input" type="text" value="${escapeHtml(draft.hours || "07:00 – 22:00")}" placeholder="07:00 – 22:00" />
               </div>
               <div class="form-group">
                 <label for="new-place-rating">Đánh giá sao</label>
-                <input id="new-place-rating" class="form-input" type="text" value="5.0" placeholder="5.0" />
+                <input id="new-place-rating" class="form-input" type="text" value="${escapeHtml(draft.rating || "5.0")}" placeholder="5.0" />
               </div>
             </div>
 
-            <div class="form-group" style="padding:10px;background:var(--paper-soft);border-radius:12px;border:1px solid var(--line);">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:12px;font-weight:700;color:var(--ink);">Tọa độ ghim trên bản đồ</span>
-                <button type="button" class="text-button" data-action="use-my-location" style="font-size:11px;">
-                  ${icon("compass")} Vị trí hiện tại
-                </button>
+            <div class="form-group" style="padding:12px;background:var(--paper-soft);border-radius:14px;border:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                <span style="font-size:12px;font-weight:700;color:var(--ink);">Tọa độ GPS ghim trên bản đồ</span>
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="text-button" data-action="pick-location-on-map" style="font-size:11px;font-weight:700;color:var(--herb);">
+                    📍 Chọn trên bản đồ
+                  </button>
+                  <button type="button" class="text-button" data-action="use-my-location" style="font-size:11px;">
+                    ${icon("compass")} Vị trí hiện tại
+                  </button>
+                </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <input id="new-place-lat" class="form-input" type="number" step="0.0001" value="${currentCoords[0]}" placeholder="Vĩ độ (Lat)" />
-                <input id="new-place-lng" class="form-input" type="number" step="0.0001" value="${currentCoords[1]}" placeholder="Kinh độ (Lng)" />
+                <input id="new-place-lat" class="form-input" type="number" step="0.00001" value="${currentCoords[0]}" placeholder="Vĩ độ (Lat)" />
+                <input id="new-place-lng" class="form-input" type="number" step="0.00001" value="${currentCoords[1]}" placeholder="Kinh độ (Lng)" />
               </div>
             </div>
 
@@ -5408,6 +5539,146 @@ function renderAddPlaceModal() {
       </article>
     </div>
   `;
+}
+
+async function triggerGeocodeAddress() {
+  const nameInput = document.querySelector("#new-place-name");
+  const addressInput = document.querySelector("#new-place-address");
+  const btn = document.querySelector("#geosearch-btn");
+  const resultsContainer = document.querySelector("#geosearch-results");
+  const statusBadge = document.querySelector("#geocode-status-badge");
+  const latInput = document.querySelector("#new-place-lat");
+  const lngInput = document.querySelector("#new-place-lng");
+
+  const query = addressInput?.value.trim() || nameInput?.value.trim();
+  if (!query) {
+    showToast("Vui lòng nhập địa chỉ hoặc tên quán để định vị", "info");
+    addressInput?.focus();
+    return;
+  }
+
+  if (btn) {
+    btn.classList.add("loading");
+    btn.innerHTML = `${icon("search")} Đang tìm…`;
+  }
+  if (statusBadge) {
+    statusBadge.innerHTML = `<span class="geosearch-status info">Đang kết nối API bản đồ…</span>`;
+  }
+
+  try {
+    const results = await geocodeLocation(query);
+    if (results.length > 0) {
+      mapState.lastGeocodeResults = results;
+      const best = results[0];
+      if (latInput) latInput.value = best.lat;
+      if (lngInput) lngInput.value = best.lng;
+      if (addressInput && (!addressInput.value || addressInput.value.length < 5)) addressInput.value = best.address;
+      if (statusBadge) {
+        statusBadge.innerHTML = `<span class="geosearch-status success">✓ Đã định vị: ${best.lat}, ${best.lng}</span>`;
+      }
+      if (resultsContainer) {
+        resultsContainer.innerHTML = `
+          <div class="geosearch-dropdown">
+            ${results.map((r, i) => `
+              <button type="button" class="geosearch-item" data-action="select-geocode-item" data-idx="${i}">
+                <div class="geosearch-item-title">
+                  <span>${escapeHtml(r.name)}</span>
+                  <span style="font-size:10px;color:var(--herb);font-weight:600;">${r.lat}, ${r.lng}</span>
+                </div>
+                <div class="geosearch-item-sub">${escapeHtml(r.address)}</div>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      }
+      showToast(`Đã tìm thấy vị trí chính xác qua API bản đồ!`, "success");
+    } else {
+      if (statusBadge) {
+        statusBadge.innerHTML = `<span class="geosearch-status" style="background:#fee2e2;color:#991b1b;">Không tìm thấy tọa độ cụ thể</span>`;
+      }
+      if (resultsContainer) resultsContainer.innerHTML = "";
+      showToast("Chưa tìm thấy tọa độ chính xác. Bạn có thể nhấn 'Chọn trên bản đồ'.", "info");
+    }
+  } catch {
+    showToast("Lỗi khi kết nối với API bản đồ", "error");
+  } finally {
+    if (btn) {
+      btn.classList.remove("loading");
+      btn.innerHTML = `${icon("search")} Định vị API`;
+    }
+  }
+}
+
+function selectGeocodeItem(idx) {
+  const item = mapState.lastGeocodeResults?.[idx];
+  if (!item) return;
+  const addressInput = document.querySelector("#new-place-address");
+  const latInput = document.querySelector("#new-place-lat");
+  const lngInput = document.querySelector("#new-place-lng");
+  const resultsContainer = document.querySelector("#geosearch-results");
+  const statusBadge = document.querySelector("#geocode-status-badge");
+
+  if (addressInput) addressInput.value = item.address;
+  if (latInput) latInput.value = item.lat;
+  if (lngInput) lngInput.value = item.lng;
+  if (statusBadge) {
+    statusBadge.innerHTML = `<span class="geosearch-status success">✓ Đã chọn: ${item.lat}, ${item.lng}</span>`;
+  }
+  if (resultsContainer) resultsContainer.innerHTML = "";
+  showToast(`Đã áp dụng tọa độ: ${item.lat}, ${item.lng}`, "success");
+}
+
+function startPickLocationOnMap() {
+  const nameInput = document.querySelector("#new-place-name");
+  const categoryInput = document.querySelector("#new-place-category");
+  const addressInput = document.querySelector("#new-place-address");
+  const priceInput = document.querySelector("#new-place-price");
+  const hoursInput = document.querySelector("#new-place-hours");
+  const ratingInput = document.querySelector("#new-place-rating");
+  const latInput = document.querySelector("#new-place-lat");
+  const lngInput = document.querySelector("#new-place-lng");
+
+  state.pendingPlaceDraft = {
+    name: nameInput?.value || "",
+    category: categoryInput?.value || "Món Việt",
+    address: addressInput?.value || "",
+    price: priceInput?.value || "<100k",
+    hours: hoursInput?.value || "07:00 – 22:00",
+    rating: ratingInput?.value || "5.0",
+    lat: latInput?.value ? parseFloat(latInput.value) : null,
+    lng: lngInput?.value ? parseFloat(lngInput.value) : null,
+  };
+
+  state.modal = null;
+  renderModal();
+
+  if (state.view !== "explore") {
+    state.view = "explore";
+    renderApp();
+  }
+
+  mapState.isPickingLocation = true;
+  showToast("📍 Hãy chạm vào điểm bất kỳ trên bản đồ để chọn vị trí quán", "info");
+}
+
+async function onMapClickPickLocation(latlng) {
+  mapState.isPickingLocation = false;
+  const lat = Number(latlng.lat.toFixed(5));
+  const lng = Number(latlng.lng.toFixed(5));
+
+  showToast("Đang định vị địa chỉ từ API bản đồ…", "info");
+  const rev = await reverseGeocodeLocation(lat, lng);
+
+  const draft = state.pendingPlaceDraft || {};
+  draft.lat = lat;
+  draft.lng = lng;
+  if (!draft.address || draft.address.length < 3 || draft.address === "Khu vực của bạn") {
+    draft.address = rev.formattedAddress;
+  }
+  state.pendingPlaceDraft = draft;
+  state.modal = { type: "add-place" };
+  renderModal();
+  showToast(`✓ Đã ghim tọa độ: ${lat}, ${lng}`, "success");
 }
 
 function submitNewPlace() {
@@ -5479,7 +5750,7 @@ function submitNewPlace() {
   }
 
   saveLocalState();
-
+  state.pendingPlaceDraft = null;
   state.modal = null;
   renderModal();
 
@@ -5530,9 +5801,12 @@ function renderPlaceModal(placeId) {
             <div class="detail-item"><span>Giờ phục vụ</span><strong>${escapeHtml(place.hours)}</strong></div>
           </div>
           <p class="muted" style="font-size:13px">${escapeHtml(place.description)}</p>
-          <div class="modal-footer">
+          <div class="modal-footer" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <a href="https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}" target="_blank" rel="noopener noreferrer" class="secondary-button" style="display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:inherit;font-weight:700;">
+              ${icon("compass")} Chỉ đường
+            </a>
             <button class="secondary-button" data-action="share-place" data-place-id="${place.id}">${icon("share")} Chia sẻ</button>
-            <button class="${isSaved(place.id) ? "secondary-button" : "primary-button"}" data-action="toggle-save" data-place-id="${place.id}" style="${isSaved(place.id) ? "color:#c53030;border-color:#fca5a5;" : ""}">
+            <button class="${isSaved(place.id) ? "secondary-button" : "primary-button"}" data-action="toggle-save" data-place-id="${place.id}" style="grid-column:1 / -1;${isSaved(place.id) ? "color:#c53030;border-color:#fca5a5;" : ""}">
               ${isSaved(place.id) ? `${trashIconSvg()} Xóa khỏi danh sách` : `${icon("bookmark")} Lưu quán này`}
             </button>
           </div>
@@ -5659,6 +5933,9 @@ function handleAction(event) {
     case "open-place": state.modal = { type: "place", placeId: target.dataset.placeId }; renderModal(); break;
     case "open-add-place": state.modal = { type: "add-place" }; renderModal(); break;
     case "submit-new-place": submitNewPlace(); break;
+    case "geocode-address": triggerGeocodeAddress(); break;
+    case "select-geocode-item": selectGeocodeItem(Number(target.dataset.idx)); break;
+    case "pick-location-on-map": startPickLocationOnMap(); break;
     case "export-backup": exportBackupData(); break;
     case "pick-food-category": {
       const catInput = document.querySelector("#new-place-category");
