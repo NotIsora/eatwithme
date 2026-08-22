@@ -4805,9 +4805,9 @@ async function fetchIpLocation() {
   }
 
   return {
-    lat: 21.0285,
-    lng: 105.8542,
-    city: "Hà Nội",
+    lat: 10.7769,
+    lng: 106.7009,
+    city: "TP. Hồ Chí Minh",
     source: "default",
   };
 }
