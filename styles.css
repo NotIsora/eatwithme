@@ -309,6 +309,27 @@ h3 { font-size: 16px; margin-bottom: 4px; }
 .map-chip:hover { background: white; transform: translateY(-1px); }
 .map-chip.active { color: white; background: var(--herb); border-color: var(--herb); }
 .map-locate-chip { display: inline-flex; align-items: center; gap: 5px; }
+.map-locate-chip.locating {
+  background: var(--paper-soft);
+  color: var(--herb);
+  border-color: var(--herb);
+  animation: pulse-chip 1.5s infinite;
+}
+.map-locate-chip.located {
+  background: var(--herb);
+  color: white;
+  border-color: var(--herb);
+}
+.map-locate-chip.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+@keyframes pulse-chip {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
 .leaflet-map, .map-fallback { position: absolute; inset: 0; z-index: 1; }
 .leaflet-container { color: var(--ink); background: #fbf8f3; font: 12px/1.45 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
 .leaflet-tile-pane { filter: saturate(1.04) contrast(.98) brightness(1.02); }
