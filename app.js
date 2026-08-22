@@ -3713,7 +3713,8 @@ const state = {
   saved: initialSavedData !== null ? initialSavedData : initialSaved,
   categoryFilter: "all",
   priceFilter: "all",
-  openDropdown: null, // "category" | "price" | null
+  sortMode: "default", // "default" | "distance" | "rating" | "price"
+  openDropdown: null, // "category" | "price" | "sort" | null
   modal: null,
   toastTimer: null,
   installAvailable: false,
@@ -4077,6 +4078,59 @@ function getCategoryMeta(catName) {
   };
 }
 
+function computeDistanceKm(lat1, lon1, lat2, lon2) {
+  if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) return null;
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatDistance(km) {
+  if (!Number.isFinite(km)) return "";
+  if (km < 1) {
+    return `${Math.round(km * 1000)} m`;
+  }
+  return `${km.toFixed(1)} km`;
+}
+
+function getPlaceDistanceText(place) {
+  if (mapState.userPosition && Number.isFinite(place.lat) && Number.isFinite(place.lng)) {
+    const dist = computeDistanceKm(mapState.userPosition[0], mapState.userPosition[1], place.lat, place.lng);
+    if (dist !== null) return formatDistance(dist);
+  }
+  return place.distance || "";
+}
+
+const SORT_LABELS = {
+  default: "Mặc định",
+  distance: "Gần bạn nhất",
+  rating: "Đánh giá cao",
+  price: "Giá thấp → cao",
+};
+
+function sortPlaces(placesArray, sortMode) {
+  const arr = [...placesArray];
+  if (sortMode === "distance" && mapState.userPosition) {
+    const [uLat, uLng] = mapState.userPosition;
+    arr.sort((a, b) => {
+      const da = computeDistanceKm(uLat, uLng, a.lat, a.lng) ?? Infinity;
+      const db = computeDistanceKm(uLat, uLng, b.lat, b.lng) ?? Infinity;
+      return da - db;
+    });
+  } else if (sortMode === "rating") {
+    arr.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+  } else if (sortMode === "price") {
+    const priceOrder = { "<100k": 1, "<200k": 2, "200k-300k": 3, "<500k": 4, "500k-800k": 5, ">1tr": 6 };
+    arr.sort((a, b) => (priceOrder[a.price] || 99) - (priceOrder[b.price] || 99));
+  }
+  return arr;
+}
+
 function getPriceMeta(priceName) {
   return PRICE_TIERS.find((p) => p.name === priceName) || {
     name: priceName || "<100k",
@@ -4111,7 +4165,7 @@ function placeCard(place, { compact = false } = {}) {
           <span style="font-size:11.5px;color:var(--ink-muted);margin-left:auto;font-weight:700;">★ ${escapeHtml(place.rating)}</span>
         </div>
         <h3 data-action="open-place" data-place-id="${place.id}" style="cursor:pointer;">${escapeHtml(place.name)}</h3>
-        <p>${escapeHtml(place.address)} · <strong>${escapeHtml(place.distance)}</strong></p>
+        <p>${escapeHtml(place.address)} · <strong>${escapeHtml(getPlaceDistanceText(place))}</strong></p>
         ${statusLabel(place)}
       </div>
       <div class="place-actions">
@@ -4244,6 +4298,7 @@ function renderSearchPanel() {
   if (state.priceFilter && state.priceFilter !== "all") {
     results = results.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
   }
+  results = sortPlaces(results, state.sortMode);
   return `<section class="panel" style="margin-bottom:22px"><div class="panel-header"><div><h2>Kết quả gần bạn</h2><p>${results.length ? `${results.length} địa điểm phù hợp với “${escapeHtml(state.query)}”` : "Thử tên món, tên quán hoặc một khu vực khác."}</p></div><button class="text-button" data-action="clear-search">Xóa tìm kiếm</button></div>${results.length ? `<div class="place-list">${results.map((place) => placeCard(place, { compact: true })).join("")}</div>` : `<div class="empty-state"><div class="empty-mark">⌕</div><h3>Chưa thấy quán này</h3><p>Bạn có thể bấm nút "Thêm quán" để tự ghim địa điểm này lên bản đồ.</p><button class="primary-button" data-action="open-add-place" style="margin-top:10px">${icon("add")} Thêm quán ngay</button></div>`}</section>`;
 }
 
@@ -4325,8 +4380,30 @@ function renderGsheetFilterBar(savedPlaces) {
         }
       </div>
 
+      <!-- Sort Dropdown -->
+      <div class="gsheet-dropdown-container">
+        <span class="gsheet-filter-title">Sắp xếp:</span>
+        <button type="button" class="gsheet-chip-cell ${state.openDropdown === "sort" ? "is-focused" : ""}" data-action="toggle-dropdown" data-dropdown="sort">
+          <span class="gsheet-chip-neutral">${escapeHtml(SORT_LABELS[state.sortMode] || "Mặc định")}</span>
+          <span class="gsheet-cell-arrow">▾</span>
+        </button>
+
+        ${
+          state.openDropdown === "sort"
+            ? `
+            <div class="gsheet-chip-menu" data-dropdown-menu>
+              ${Object.entries(SORT_LABELS).map(([key, label]) => `
+                <div class="gsheet-chip-item ${state.sortMode === key ? "selected" : ""}" data-action="select-sort" data-value="${key}">
+                  <span class="gsheet-chip-neutral">${escapeHtml(label)}</span>
+                </div>
+              `).join("")}
+            </div>`
+            : ""
+        }
+      </div>
+
       ${
-        state.categoryFilter !== "all" || state.priceFilter !== "all"
+        state.categoryFilter !== "all" || state.priceFilter !== "all" || state.sortMode !== "default"
           ? `<button type="button" class="gsheet-reset-btn" data-action="reset-saved-filters" title="Xóa tất cả bộ lọc">
               <span>×</span> Đặt lại
             </button>`
@@ -4363,6 +4440,8 @@ function renderSaved() {
   if (state.priceFilter && state.priceFilter !== "all") {
     filtered = filtered.filter((place) => (place.price || "").toLowerCase() === state.priceFilter.toLowerCase());
   }
+
+  filtered = sortPlaces(filtered, state.sortMode);
 
   return `
     <div class="page-title-row">
@@ -4522,6 +4601,7 @@ function buildInteractiveMap(L) {
   if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
   mapState.savedMarkers.clear();
   mapState.tilesLoaded = false;
+  mapState.accuracyCircle = null;
 
   const map = L.map(element, {
     zoomControl: false,
@@ -4730,8 +4810,8 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
     }).addTo(mapState.instance);
   }
 
-  const radius = Number.isFinite(accuracy) ? Math.max(10, Math.min(accuracy, 1200)) : null;
-  if (radius && radius < 1200) {
+  const radius = Number.isFinite(accuracy) ? Math.max(10, Math.min(accuracy, 2500)) : null;
+  if (radius && radius <= 2500) {
     if (mapState.accuracyCircle) {
       mapState.accuracyCircle.setLatLng(point).setRadius(radius);
     } else {
@@ -5003,11 +5083,31 @@ function startLocationPrefetch() {
   return locationPrefetchPromise;
 }
 
+function setLocateButtonState(status, { accuracy = null } = {}) {
+  const btn = document.querySelector(".map-locate-chip");
+  if (!btn) return;
+  btn.classList.remove("locating", "located", "error");
+  if (status === "locating") {
+    btn.classList.add("locating");
+    btn.innerHTML = `${icon("compass")} Đang tìm GPS…`;
+  } else if (status === "located") {
+    btn.classList.add("located");
+    const accLabel = Number.isFinite(accuracy) ? ` ±${Math.round(accuracy)}m` : "";
+    btn.innerHTML = `${icon("check")} Đã định vị${accLabel}`;
+  } else if (status === "error") {
+    btn.classList.add("error");
+    btn.innerHTML = `${icon("compass")} Cần quyền GPS`;
+  } else {
+    btn.innerHTML = `${icon("compass")} Định vị tôi`;
+  }
+}
+
 async function locateDevice({ silent = false } = {}) {
   if (!mapState.instance) return;
   if (mapState.locationPending) return;
 
   mapState.locationPending = true;
+  setLocateButtonState("locating");
   if (!silent) showToast("Đang định vị chuẩn xác…", "success");
 
   if (mapState.userPosition) {
@@ -5036,6 +5136,7 @@ async function locateDevice({ silent = false } = {}) {
           animate: true,
           accuracy,
         });
+        setLocateButtonState("located", { accuracy });
         const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí theo Wi-Fi/Mạng";
         updateMapCaption(`${label} · độ chuẩn ±${Math.round(accuracy || 10)}m`);
       },
@@ -5048,9 +5149,23 @@ async function locateDevice({ silent = false } = {}) {
       mapState.hasLocatedUser = true;
       renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true, accuracy });
       mapState.instance.setView(pt, MAP_LOCATE_ZOOM, { animate: true });
+      setLocateButtonState("located", { accuracy });
       const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
       updateMapCaption(`${label} (độ chuẩn ±${Math.round(accuracy || 10)}m) · bản đồ đã sẵn sàng`);
       if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
+      // Re-render place cards to update dynamic distance labels
+      requestAnimationFrame(() => {
+        if (state.view === "explore" || state.view === "saved") {
+          document.querySelectorAll(".place-card[data-place-id]").forEach((card) => {
+            const id = card.dataset.placeId;
+            const place = places.find((p) => p.id === id);
+            if (place) {
+              const distEl = card.querySelector(".place-copy p strong");
+              if (distEl) distEl.textContent = getPlaceDistanceText(place);
+            }
+          });
+        }
+      });
     } else {
       const err = streamResult?.error;
       const ip = await fetchIpLocation();
@@ -5060,10 +5175,12 @@ async function locateDevice({ silent = false } = {}) {
       mapState.instance.setView(pt, MAP_DEFAULT_ZOOM, { animate: true });
 
       if (err?.code === 1) {
+        setLocateButtonState("error");
         const msg = "Nhấn biểu tượng cài đặt trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
         updateMapCaption(`Chưa cấp quyền GPS · đang hiển thị khu vực ${escapeHtml(ip.city)}`);
         if (!silent) showToast(msg, "error");
       } else {
+        setLocateButtonState("idle");
         updateMapCaption(`Vị trí khu vực ${escapeHtml(ip.city)} · bản đồ đã sẵn sàng`);
         if (!silent) showToast(`Đã định vị khu vực ${ip.city}`, "success");
       }
@@ -5730,7 +5847,7 @@ function renderPlaceModal(placeId) {
           <p class="muted">${escapeHtml(place.address)}</p>
           <div class="detail-grid">
             <div class="detail-item"><span>Trạng thái hôm nay</span><strong>${place.status === "open" ? `Đang mở · đóng lúc ${escapeHtml(place.closes)}` : `Đã đóng · ${escapeHtml(place.closes)}`}</strong></div>
-            <div class="detail-item"><span>Đánh giá cộng đồng</span><strong>★ ${escapeHtml(place.rating)} · ${escapeHtml(place.distance)}</strong></div>
+            <div class="detail-item"><span>Đánh giá cộng đồng</span><strong>★ ${escapeHtml(place.rating)} · ${escapeHtml(getPlaceDistanceText(place))}</strong></div>
             <div class="detail-item"><span>Giờ phục vụ</span><strong>${escapeHtml(place.hours)}</strong></div>
           </div>
           <p class="muted" style="font-size:13px">${escapeHtml(place.description)}</p>
@@ -5934,6 +6051,12 @@ function handleAction(event) {
       renderApp();
       break;
     }
+    case "select-sort": {
+      state.sortMode = target.dataset.value;
+      state.openDropdown = null;
+      renderApp();
+      break;
+    }
     case "share-place": state.modal = { type: "share", placeId: target.dataset.placeId }; renderModal(); break;
     case "copy-place-info": copyPlaceInfo(target.dataset.placeId); break;
     case "native-share-place": nativeSharePlace(target.dataset.placeId); break;
@@ -5942,6 +6065,7 @@ function handleAction(event) {
     case "reset-saved-filters": {
       state.categoryFilter = "all";
       state.priceFilter = "all";
+      state.sortMode = "default";
       state.openDropdown = null;
       renderApp();
       break;
