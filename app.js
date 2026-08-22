@@ -4571,13 +4571,11 @@ function buildInteractiveMap(L) {
     mapState.savedMarkers.set(place.id, marker);
   }
 
-  const points = saved.map((place) => [place.lat, place.lng]);
-  if (mapState.userPosition) points.push(mapState.userPosition);
-  if (points.length > 1) {
-    const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 15 });
-  } else if (points.length === 1) {
-    map.setView(points[0], MAP_LOCATE_ZOOM);
+  // Keep map focused on default center unless user requested locate
+  if (mapState.hasLocatedUser && mapState.userPosition) {
+    map.setView(mapState.userPosition, MAP_LOCATE_ZOOM);
+  } else {
+    map.setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   }
 
   mapState.instance = map;
