@@ -4810,7 +4810,7 @@ async function fetchIpLocation() {
   };
 }
 
-function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
+function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 10000 } = {}) {
   if (isNativeCapacitor()) {
     return requestPrecisePosition(maxWaitMs);
   }
@@ -4844,7 +4844,11 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
     }
 
     function tryLowAccuracyFallback() {
-      if (settled || bestCoords) return;
+      if (settled) return;
+      if (bestCoords) {
+        finish({ position: { coords: bestCoords }, source: "best-stream" });
+        return;
+      }
       try {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -4862,12 +4866,34 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
               finish({ error: err || { code: 2 } });
             }
           },
-          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+          { enableHighAccuracy: false, timeout: 6000, maximumAge: 120000 },
         );
       } catch (e) {
         finish({ error: { code: 2 } });
       }
     }
+
+    // Try getCurrentPosition immediately in parallel with watchPosition for fast response
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (settled) return;
+          if (pos?.coords) {
+            const accuracy = pos.coords.accuracy || 100;
+            if (accuracy < bestAccuracy) {
+              bestAccuracy = accuracy;
+              bestCoords = pos.coords;
+            }
+            if (typeof onUpdate === "function") onUpdate(pos, { source: "fast" });
+            if (accuracy <= 30) {
+              finish({ position: pos, source: "gps", precise: true });
+            }
+          }
+        },
+        () => { /* watchPosition fallback will handle it */ },
+        { enableHighAccuracy: true, timeout: 4000, maximumAge: 30000 }
+      );
+    } catch { /* ignore */ }
 
     fallbackTimeout = window.setTimeout(() => {
       if (bestCoords) {
@@ -4881,7 +4907,7 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
           }
         }, 3000);
       }
-    }, 2800);
+    }, 4500);
 
     try {
       watchId = navigator.geolocation.watchPosition(
@@ -4900,7 +4926,7 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
             onUpdate(pos, { source: accuracy <= 35 ? "gps" : "wifi" });
           }
 
-          if (accuracy <= 25) {
+          if (accuracy <= 35) {
             finish({ position: pos, source: "gps", precise: true });
           }
         },
@@ -4912,7 +4938,7 @@ function requestGoogleMapsLocation({ onUpdate, maxWaitMs = 8000 } = {}) {
           }
           tryLowAccuracyFallback();
         },
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 10000 },
+        { enableHighAccuracy: true, timeout: 9000, maximumAge: 15000 },
       );
     } catch {
       tryLowAccuracyFallback();
