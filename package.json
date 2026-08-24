@@ -14,8 +14,9 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
+    "geocode": "node scripts/import-excel-geocode.mjs",
     "build:mobile": "node build.mjs",
-    "cap:sync": "npm run build:mobile && cap sync",
+    "cap:sync": "npm run build:mobile && cap sync && node .claude/hooks/notify.js cap:sync medium \"Capacitor sync finished\"",
     "cap:add:android": "cap add android",
     "cap:add:ios": "cap add ios",
     "cap:open:android": "cap open android",
