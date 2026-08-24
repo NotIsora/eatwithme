@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EatWithMe — Trình Kiểm Tra & Lấy Tọa Độ Google Maps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --canvas: #f7f2e9;
+      --paper: #ffffff;
+      --paper-soft: #fcfaf7;
+      --ink: #211b18;
+      --ink-muted: #7d726b;
+      --line: #e8ded4;
+      --coral: #e55d42;
+      --coral-dark: #cc4930;
+      --herb: #438e70;
+      --gold: #d19a3b;
+      --radius: 12px;
+      --shadow: 0 4px 20px rgba(33, 27, 24, 0.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--canvas);
+      color: var(--ink);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      background: var(--paper);
+      padding: 24px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+    h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 26px;
+      color: var(--coral-dark);
+      margin-bottom: 8px;
+    }
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      background: var(--paper-soft);
+      border: 1px solid var(--line);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .stat-item span {
+      font-weight: 700;
+      color: var(--coral);
+    }
+    .actions-bar {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--coral);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover { background: var(--coral-dark); }
+    button.secondary {
+      background: var(--paper-soft);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    button.secondary:hover { background: var(--line); }
+    .search-input {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      font-family: inherit;
+      font-size: 14px;
+      flex: 1;
+      min-width: 250px;
+    }
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--ink);
+    }
+    .card-badge {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      background: #eef7f2;
+      color: var(--herb);
+    }
+    .card-badge.pending {
+      background: #fdf4e8;
+      color: var(--gold);
+    }
+    .card-meta {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+    .coord-display {
+      font-family: monospace;
+      font-size: 12px;
+      background: var(--paper-soft);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+    }
+    .paste-box {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-row button {
+      flex: 1;
+      padding: 8px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🗺️ Trình Kiểm Tra & Lấy Tọa Độ Google Maps</h1>
+    <p>Mở liên kết tìm kiếm trên Google Maps, copy URL có chứa <code>/@10.xxx,106.xxx/</code> hoặc <code>!3d...!4d...</code> và dán vào ô bên dưới.</p>
+
+    <div class="stats-bar">
+      <div class="stat-item">Tổng số quán: <span id="stat-total">0</span></div>
+      <div class="stat-item">Đã có tọa độ: <span id="stat-verified">0</span></div>
+      <div class="stat-item">Quận 1: <span id="stat-q1">0</span></div>
+    </div>
+
+    <div class="actions-bar">
+      <input type="text" id="filter-input" class="search-input" placeholder="🔍 Lọc theo tên quán, địa chỉ, hoặc quận...">
+      <button id="btn-export">💾 Xuất Dữ Liệu JSON</button>
+      <button id="btn-copy-appjs" class="secondary">📋 Sao Chép Cho app.js</button>
+    </div>
+  </header>
+
+  <div id="places-grid" class="grid"></div>
+
+  <script type="module">
+    import { parseGoogleMapsCoordinates, isValidHcmcCoordinate } from "./extract-google-coords.mjs";
+
+    let places = [];
+
+    async function init() {
+      try {
+        const res = await fetch("../data/google-maps-places.json");
+        places = await res.json();
+      } catch (err) {
+        console.warn("Falling back to embedded places:", err);
+      }
+      render();
+    }
+
+    function render() {
+      const filter = document.getElementById("filter-input").value.toLowerCase();
+      const grid = document.getElementById("places-grid");
+      grid.innerHTML = "";
+
+      const filtered = places.filter(p =>
+        p.name.toLowerCase().includes(filter) ||
+        p.address.toLowerCase().includes(filter) ||
+        p.district.toLowerCase().includes(filter)
+      );
+
+      document.getElementById("stat-total").innerText = places.length;
+      document.getElementById("stat-verified").innerText = places.filter(p => isValidHcmcCoordinate(p.lat, p.lng)).length;
+      document.getElementById("stat-q1").innerText = places.filter(p => p.district.includes("Quận 1")).length;
+
+      filtered.forEach((p, idx) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        const hasValidCoords = isValidHcmcCoordinate(p.lat, p.lng);
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div>
+              <div class="card-title">${p.name}</div>
+              <div class="card-meta">${p.category} • ${p.district} • ${p.price}</div>
+            </div>
+            <div class="card-badge ${hasValidCoords ? "" : "pending"}">${hasValidCoords ? "✓ " + (p.geocodeSource || "OK") : "Chưa có"}</div>
+          </div>
+          <div class="card-meta">📍 ${p.address}</div>
+          <div class="coord-display">
+            <span>Lat: <strong>${p.lat || 'Chưa có'}</strong></span>
+            <span>Lng: <strong>${p.lng || 'Chưa có'}</strong></span>
+          </div>
+          <input type="text" class="paste-box" placeholder="Dán link Google Maps hoặc tọa độ..." data-idx="${idx}">
+          <div class="btn-row">
+            <button onclick="window.open('${p.googleSearchUrl}', '_blank')">🔍 Mở Google Maps</button>
+            <button class="secondary" onclick="navigator.clipboard.writeText('${p.lat}, ${p.lng}')">📋 Copy Lat/Lng</button>
+          </div>
+        `;
+
+        const input = card.querySelector(".paste-box");
+        input.addEventListener("input", async (e) => {
+          const val = e.target.value.trim();
+          const parsed = parseGoogleMapsCoordinates(val);
+          if (parsed) {
+            p.lat = parsed.lat;
+            p.lng = parsed.lng;
+            p.geocodeSource = "google_maps_url";
+            p.isVerified = true;
+
+            // Persist to server (saves data/google-maps-places.json, geocoded-cache.json, and app.js)
+            try {
+              const saveRes = await fetch("/api/save-place", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: p.id, lat: parsed.lat, lng: parsed.lng, source: "google_maps_url" })
+              });
+              if (saveRes.ok) {
+                console.log(`Saved ${p.name} -> (${parsed.lat}, ${parsed.lng})`);
+              }
+            } catch (err) {
+              console.warn("Could not auto-save to server:", err);
+            }
+
+            // Update UI in place without wiping the input
+            const badge = card.querySelector(".card-badge");
+            badge.className = "card-badge";
+            badge.innerText = "✓ google_maps_url";
+
+            const coordSpan = card.querySelector(".coord-display");
+            coordSpan.innerHTML = `<span>Lat: <strong>${parsed.lat}</strong></span><span>Lng: <strong>${parsed.lng}</strong></span>`;
+
+            input.style.borderColor = "var(--herb)";
+            input.style.background = "#eef7f2";
+          }
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    document.getElementById("filter-input").addEventListener("input", render);
+
+    document.getElementById("btn-export").addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(places, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "google-maps-verified-places.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    document.getElementById("btn-copy-appjs").addEventListener("click", () => {
+      const appJsArray = JSON.stringify(places, null, 2);
+      navigator.clipboard.writeText(`const defaultPlaces = ${appJsArray};\n`);
+      alert("Đã sao chép mảng defaultPlaces vào bộ nhớ tạm!");
+    });
+
+    init();
+  </script>
+</body>
+</html>
