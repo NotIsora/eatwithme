@@ -167,6 +167,45 @@
       padding: 8px;
       font-size: 13px;
     }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--ink);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.error {
+      background: var(--coral-dark);
+    }
+    .status-msg {
+      font-size: 12px;
+      margin-top: 4px;
+      font-weight: 500;
+      display: none;
+    }
+    .status-msg.show {
+      display: block;
+    }
+    .status-msg.success {
+      color: var(--herb);
+    }
+    .status-msg.err {
+      color: var(--coral-dark);
+    }
   </style>
 </head>
 <body>
@@ -189,11 +228,21 @@
   </header>
 
   <div id="places-grid" class="grid"></div>
+  <div id="toast" class="toast"></div>
 
   <script type="module">
     import { parseGoogleMapsCoordinates, isValidHcmcCoordinate } from "./extract-google-coords.mjs";
 
     let places = [];
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.className = isError ? "toast show error" : "toast show";
+      setTimeout(() => {
+        toast.className = "toast";
+      }, 3000);
+    }
 
     async function init() {
       try {
@@ -239,6 +288,7 @@
             <span>Lng: <strong>${p.lng || 'Chưa có'}</strong></span>
           </div>
           <input type="text" class="paste-box" placeholder="Dán link Google Maps hoặc tọa độ..." data-idx="${idx}">
+          <div class="status-msg"></div>
           <div class="btn-row">
             <button onclick="window.open('${p.googleSearchUrl}', '_blank')">🔍 Mở Google Maps</button>
             <button class="secondary" onclick="navigator.clipboard.writeText('${p.lat}, ${p.lng}')">📋 Copy Lat/Lng</button>
@@ -246,14 +296,26 @@
         `;
 
         const input = card.querySelector(".paste-box");
+        const statusMsg = card.querySelector(".status-msg");
+
         input.addEventListener("input", async (e) => {
           const val = e.target.value.trim();
+          if (!val) {
+            statusMsg.className = "status-msg";
+            statusMsg.innerText = "";
+            return;
+          }
+
           const parsed = parseGoogleMapsCoordinates(val);
           if (parsed) {
             p.lat = parsed.lat;
             p.lng = parsed.lng;
             p.geocodeSource = "google_maps_url";
             p.isVerified = true;
+
+            // Show local parsing success
+            statusMsg.className = "status-msg show success";
+            statusMsg.innerText = "⏳ Đang lưu vào server...";
 
             // Persist to server (saves data/google-maps-places.json, geocoded-cache.json, and app.js)
             try {
@@ -262,14 +324,24 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id: p.id, lat: parsed.lat, lng: parsed.lng, source: "google_maps_url" })
               });
+
               if (saveRes.ok) {
-                console.log(`Saved ${p.name} -> (${parsed.lat}, ${parsed.lng})`);
+                const resData = await saveRes.json();
+                statusMsg.className = "status-msg show success";
+                statusMsg.innerText = `✅ Đã lưu thành công: (${parsed.lat}, ${parsed.lng})`;
+                showToast(`✅ Đã lưu "${p.name}" (${parsed.lat}, ${parsed.lng})`);
+              } else {
+                statusMsg.className = "status-msg show err";
+                statusMsg.innerText = "❌ Lỗi lưu server";
+                showToast(`❌ Lỗi lưu "${p.name}"`, true);
               }
             } catch (err) {
-              console.warn("Could not auto-save to server:", err);
+              statusMsg.className = "status-msg show err";
+              statusMsg.innerText = "❌ Lỗi kết nối server";
+              showToast("❌ Không thể kết nối tới server local", true);
             }
 
-            // Update UI in place without wiping the input
+            // Update UI in place
             const badge = card.querySelector(".card-badge");
             badge.className = "card-badge";
             badge.innerText = "✓ google_maps_url";
@@ -279,6 +351,12 @@
 
             input.style.borderColor = "var(--herb)";
             input.style.background = "#eef7f2";
+
+            // Update header stat count
+            document.getElementById("stat-verified").innerText = places.filter(pl => isValidHcmcCoordinate(pl.lat, pl.lng)).length;
+          } else if (val.length > 5) {
+            statusMsg.className = "status-msg show err";
+            statusMsg.innerText = "⚠️ Chưa tìm thấy tọa độ @lat,lng hợp lệ trong link này";
           }
         });
 
