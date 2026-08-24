@@ -1,7 +1,9 @@
 import { cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const outputDir = new URL("./dist/", import.meta.url);
+const outputDirPath = fileURLToPath(outputDir);
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 
@@ -11,7 +13,7 @@ await build({
   format: "esm",
   platform: "browser",
   target: "es2020",
-  outfile: new URL("./app.js", outputDir),
+  outfile: `${outputDirPath}app.js`,
   sourcemap: true,
   logLevel: "info",
 });

@@ -8,3 +8,6 @@ artifacts/
 .DS_Store
 *.log
 db/runtime-state.json
+.agents/
+.claude/
+skills-lock.json

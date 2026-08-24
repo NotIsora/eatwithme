@@ -1,7 +1,17 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import XLSX from "xlsx";
 
-const DEFAULT_MAP_CENTER = [10.7769, 106.7009];
+const DEFAULT_MAP_CENTER = [10.7769, 106.7009]; // Saigon Central (District 1)
+const CACHE_PATH = "./data/geocoded-cache.json";
+
+// Bounding box for Greater Ho Chi Minh City
+const HCMC_BOUNDS = {
+  minLat: 10.30,
+  maxLat: 11.20,
+  minLng: 106.30,
+  maxLng: 107.10,
+};
 
 const DISTRICT_CENTERS = {
   "Quận 1": { lat: 10.7756, lng: 106.7004 },
@@ -21,7 +31,26 @@ const DISTRICT_CENTERS = {
   "Bình Tân": { lat: 10.7656, lng: 106.6025 },
   "Tân Phú": { lat: 10.7900, lng: 106.6281 },
   "Thủ Đức": { lat: 10.8494, lng: 106.7725 },
+  "TP Thủ Đức": { lat: 10.8494, lng: 106.7725 },
 };
+
+// Known Saigon landmarks and major shopping centers
+const LANDMARK_GEOCODES = [
+  { match: "Takashimaya", lat: 10.77346, lng: 106.70112 },
+  { match: "Saigon Centre", lat: 10.77346, lng: 106.70112 },
+  { match: "Vincom Đồng Khởi", lat: 10.77782, lng: 106.70222 },
+  { match: "Vincom Center", lat: 10.77782, lng: 106.70222 },
+  { match: "Bitexco", lat: 10.77161, lng: 106.70415 },
+  { match: "Crescent Mall", lat: 10.72911, lng: 106.72145 },
+  { match: "SC VivoCity", lat: 10.73089, lng: 106.70321 },
+  { match: "Landmark 81", lat: 10.79512, lng: 106.72183 },
+  { match: "Vạn Hạnh Mall", lat: 10.77094, lng: 106.67054 },
+  { match: "Diamond Plaza", lat: 10.78124, lng: 106.69894 },
+  { match: "Chợ Bến Thành", lat: 10.77258, lng: 106.69889 },
+  { match: "Chợ Tân Định", lat: 10.78930, lng: 106.68831 },
+  { match: "Chợ Lớn", lat: 10.75274, lng: 106.65733 },
+  { match: "Chợ Bà Chiểu", lat: 10.80163, lng: 106.69919 },
+];
 
 function getCategoryTheme(cat) {
   switch (cat) {
@@ -44,132 +73,232 @@ function getCategoryTheme(cat) {
   }
 }
 
-// Known exact coordinates for common streets / places in Saigon to give high precision without external API latency
-const STREET_GEOCODES = [
-  { match: "Tôn Thất Thiệp", lat: 10.77171, lng: 106.70363 },
-  { match: "Trần Khắc Chân", lat: 10.78888, lng: 106.69250 },
-  { match: "Thái Văn Lung", lat: 10.77858, lng: 106.70526 },
-  { match: "Nguyễn Cư Trinh", lat: 10.76231, lng: 106.69140 },
-  { match: "Nguyễn Trung Ngạn", lat: 10.78473, lng: 106.70287 },
-  { match: "Nguyễn Trung Trực", lat: 10.77341, lng: 106.70502 },
-  { match: "Nguyễn Trãi", lat: 10.76526, lng: 106.69054 },
-  { match: "CMT8", lat: 10.77659, lng: 106.69997 },
-  { match: "Cách mạng tháng 8", lat: 10.77659, lng: 106.69997 },
-  { match: "Trần Đình Xu", lat: 10.76012, lng: 106.69017 },
-  { match: "Lý Tự Trọng", lat: 10.77700, lng: 106.70084 },
-  { match: "Trần Hưng Đạo", lat: 10.75639, lng: 106.68523 },
-  { match: "Lê Thánh Tôn", lat: 10.77722, lng: 106.70444 },
-  { match: "Sương Nguyệt Anh", lat: 10.77173, lng: 106.69757 },
-  { match: "Cống Quỳnh", lat: 10.76636, lng: 106.69082 },
-  { match: "Nguyễn Tri Phương", lat: 10.76085, lng: 106.67054 },
-  { match: "Nguyễn Công Trứ", lat: 10.76941, lng: 106.70112 },
-  { match: "Phan Kế Bính", lat: 10.78899, lng: 106.70184 },
-  { match: "Lê Lợi", lat: 10.77346, lng: 106.69557 },
-  { match: "Nguyễn Huệ", lat: 10.77448, lng: 106.70355 },
-  { match: "Hai Bà Trưng", lat: 10.78091, lng: 106.70111 },
-  { match: "Calmette", lat: 10.76815, lng: 106.69894 },
-  { match: "Đề Thám", lat: 10.76552, lng: 106.68926 },
-  { match: "Phan Bội Châu", lat: 10.77258, lng: 106.69889 },
-  { match: "Hồ Tùng Mậu", lat: 10.77161, lng: 106.70415 },
-  { match: "Nguyễn Đình Chiểu", lat: 10.78080, lng: 106.68652 },
-  { match: "Cao Thắng", lat: 10.77655, lng: 106.68693 },
-  { match: "Hoàng Sa", lat: 10.78984, lng: 106.68414 },
-  { match: "Phạm Ngọc Thạch", lat: 10.78377, lng: 106.67983 },
-  { match: "Kỳ Đồng", lat: 10.78046, lng: 106.68886 },
-  { match: "Trần Quốc Thảo", lat: 10.78711, lng: 106.68858 },
-  { match: "Rạch Bùng Binh", lat: 10.78019, lng: 106.68154 },
-  { match: "Nam Kỳ Khởi Nghĩa", lat: 10.78768, lng: 106.68021 },
-  { match: "Võ Văn Tần", lat: 10.77750, lng: 106.68689 },
-  { match: "Trần Quốc Toản", lat: 10.79019, lng: 106.68754 },
-  { match: "Võ Thị Sáu", lat: 10.78930, lng: 106.68831 },
-  { match: "Nguyễn Thiện Thuật", lat: 10.76821, lng: 106.68012 },
-  { match: "Hoàng Diệu", lat: 10.75947, lng: 106.70215 },
-  { match: "Tôn Đản", lat: 10.76065, lng: 106.70237 },
-  { match: "Xóm Chiếu", lat: 10.75731, lng: 106.70692 },
-  { match: "Khánh Hội", lat: 10.75643, lng: 106.70522 },
-  { match: "Bến Vân Đồn", lat: 10.75702, lng: 106.70414 },
-  { match: "Vĩnh Khánh", lat: 10.76085, lng: 106.70541 },
-  { match: "Trần Phú", lat: 10.75641, lng: 106.67084 },
-  { match: "Nguyễn Biểu", lat: 10.75482, lng: 106.67947 },
-  { match: "Ngô Quyền", lat: 10.75274, lng: 106.66034 },
-  { match: "Hậu Giang", lat: 10.74986, lng: 106.65733 },
-  { match: "Bình Tiên", lat: 10.74812, lng: 106.64512 },
-  { match: "Lê Văn Lương", lat: 10.73200, lng: 106.69846 },
-  { match: "Âu Dương Lân", lat: 10.74512, lng: 106.67812 },
-  { match: "Phong Phú", lat: 10.74415, lng: 106.67215 },
-  { match: "Sư Vạn Hạnh", lat: 10.77094, lng: 106.67956 },
-  { match: "Lý Thái Tổ", lat: 10.76812, lng: 106.67215 },
-  { match: "Tô Hiến Thành", lat: 10.77926, lng: 106.67048 },
-  { match: "Bà Hạt", lat: 10.76158, lng: 106.69115 },
-  { match: "3 Tháng 2", lat: 10.77123, lng: 106.67245 },
-  { match: "đường 3/2", lat: 10.77123, lng: 106.67245 },
-  { match: "Vĩnh Viễn", lat: 10.76182, lng: 106.66812 },
-  { match: "Nguyễn Thượng Hiền", lat: 10.77812, lng: 106.68512 },
-  { match: "Hòa Hưng", lat: 10.78124, lng: 106.67245 },
-  { match: "Nguyễn Lâm", lat: 10.76112, lng: 106.66512 },
-  { match: "Thành Thái", lat: 10.77150, lng: 106.66120 },
-  { match: "Điện Biên Phủ", lat: 10.78512, lng: 106.69124 },
-  { match: "Cù Lao", lat: 10.79510, lng: 106.69919 },
-  { match: "Phan Văn Trị", lat: 10.82512, lng: 106.68512 },
-  { match: "Lê Văn Thọ", lat: 10.84512, lng: 106.66215 },
-  { match: "Nguyễn Hữu Cảnh", lat: 10.78930, lng: 106.71120 },
-  { match: "Phạm Văn Hai", lat: 10.79512, lng: 106.65812 },
-  { match: "Âu Cơ", lat: 10.78124, lng: 106.64512 },
-  { match: "Thảo Điền", lat: 10.80163, lng: 106.71887 },
-  { match: "Quốc Hương", lat: 10.80412, lng: 106.72150 },
-  { match: "Ngô Quang Huy", lat: 10.80215, lng: 106.72312 },
-  { match: "Nguyễn Duy Hiệu", lat: 10.80312, lng: 106.72812 },
-  { match: "Nguyễn Văn Thủ", lat: 10.78512, lng: 106.69812 },
-  { match: "Tôn Thất Đạm", lat: 10.77123, lng: 106.70245 },
-  { match: "Pasteur", lat: 10.78124, lng: 106.69512 },
-  { match: "Phan Chu Trinh", lat: 10.77245, lng: 106.69812 },
-  { match: "Đặng Dung", lat: 10.79112, lng: 106.69124 },
-  { match: "Tiểu La", lat: 10.75512, lng: 106.66245 },
-  { match: "Lê Văn Duyệt", lat: 10.79510, lng: 106.69919 }
-];
+function normalizeAddressForGeocoding(address, placeName, district) {
+  let clean = (address || "").trim();
+  // Strip floor, mall unit indicators
+  clean = clean.replace(/tầng\s+[b\d\w\-]+/gi, "")
+               .replace(/lầu\s+\d+/gi, "")
+               .replace(/b\d+[\-\s]\d+/gi, "")
+               .replace(/shophouse\s+[a-z0-9\-]+/gi, "")
+               .replace(/kiot\s+[a-z0-9\-]+/gi, "")
+               .replace(/hẻm\s+/gi, "")
+               .replace(/cắt\s+[\w\s]+/gi, "")
+               .trim();
 
-function geocodeByStreet(address, districtName, name) {
-  if (address) {
-    for (const item of STREET_GEOCODES) {
-      if (address.toLowerCase().includes(item.match.toLowerCase())) {
-        const char1 = name ? name.charCodeAt(0) : 0;
-        const jitterLat = ((char1 % 7) - 3) * 0.0003;
-        const jitterLng = ((char1 % 5) - 2) * 0.0003;
-        return {
-          lat: Number((item.lat + jitterLat).toFixed(6)),
-          lng: Number((item.lng + jitterLng).toFixed(6))
-        };
+  // Expand common street abbreviations
+  clean = clean.replace(/\bcmt8\b/gi, "Cách Mạng Tháng 8")
+               .replace(/\bđbp\b/gi, "Điện Biên Phủ")
+               .replace(/\bnkkn\b/gi, "Nam Kỳ Khởi Nghĩa")
+               .replace(/\bnvt\b/gi, "Nguyễn Văn Trỗi")
+               .replace(/\bntp\b/gi, "Nguyễn Tri Phương")
+               .replace(/\bđường 3\/2\b/gi, "Đường 3 Tháng 2")
+               .replace(/\b3\/2\b/gi, "Đường 3 Tháng 2");
+
+  let dist = (district || "").trim();
+  if (!dist.toLowerCase().startsWith("quận") && !dist.toLowerCase().startsWith("tp") && !["phú nhuận", "gò vấp", "bình thạnh", "tân bình", "bình tân", "tân phú", "thủ đức"].includes(dist.toLowerCase())) {
+    dist = `Quận ${dist}`;
+  }
+
+  return { cleanAddress: clean, district: dist };
+}
+
+function isValidCoordinate(lat, lng) {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat >= HCMC_BOUNDS.minLat &&
+    lat <= HCMC_BOUNDS.maxLat &&
+    lng >= HCMC_BOUNDS.minLng &&
+    lng <= HCMC_BOUNDS.maxLng
+  );
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchPhoton(query, biasLat = DEFAULT_MAP_CENTER[0], biasLng = DEFAULT_MAP_CENTER[1]) {
+  try {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${biasLat}&lon=${biasLng}&limit=1`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.features && data.features.length > 0) {
+      const coords = data.features[0].geometry?.coordinates;
+      if (coords && coords.length >= 2) {
+        const lng = Number(coords[0].toFixed(6));
+        const lat = Number(coords[1].toFixed(6));
+        if (isValidCoordinate(lat, lng)) {
+          return { lat, lng, source: "photon" };
+        }
       }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function fetchNominatim(query) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&countrycodes=vn`;
+    const res = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "EatWithMe-App/1.0 (https://github.com/notisora/eatwithme)"
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      const lat = Number(parseFloat(data[0].lat).toFixed(6));
+      const lng = Number(parseFloat(data[0].lon).toFixed(6));
+      if (isValidCoordinate(lat, lng)) {
+        return { lat, lng, source: "nominatim" };
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function fetchEsri(query) {
+  try {
+    const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine=${encodeURIComponent(query)}&location=${DEFAULT_MAP_CENTER[1]},${DEFAULT_MAP_CENTER[0]}&distance=30000&f=json&maxLocations=1`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.candidates && data.candidates.length > 0) {
+      const loc = data.candidates[0].location;
+      if (loc) {
+        const lat = Number(loc.y.toFixed(6));
+        const lng = Number(loc.x.toFixed(6));
+        if (isValidCoordinate(lat, lng)) {
+          return { lat, lng, source: "esri" };
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function geocodePlace(name, address, district, cache) {
+  const cacheKey = `${name} | ${address} | ${district}`.toLowerCase();
+  if (cache[cacheKey] && isValidCoordinate(cache[cacheKey].lat, cache[cacheKey].lng)) {
+    return { ...cache[cacheKey], fromCache: true };
+  }
+
+  // 1. Check known landmark dictionary
+  const fullText = `${name} ${address}`;
+  for (const lm of LANDMARK_GEOCODES) {
+    if (fullText.toLowerCase().includes(lm.match.toLowerCase())) {
+      const res = { lat: lm.lat, lng: lm.lng, source: "landmark" };
+      cache[cacheKey] = res;
+      return res;
     }
   }
 
-  // District fallback
-  let center = DISTRICT_CENTERS[districtName];
+  const { cleanAddress, district: normDistrict } = normalizeAddressForGeocoding(address, name, district);
+
+  // Queries to try
+  const queries = [
+    `${name}, ${cleanAddress}, ${normDistrict}, TP. Hồ Chí Minh`,
+    `${cleanAddress}, ${normDistrict}, Hồ Chí Minh, Việt Nam`,
+    `${cleanAddress}, ${normDistrict}`
+  ].filter(Boolean);
+
+  // Tier 1: Photon
+  for (const q of queries) {
+    const res = await fetchPhoton(q);
+    if (res) {
+      cache[cacheKey] = res;
+      return res;
+    }
+  }
+
+  // Tier 2: Nominatim
+  for (const q of queries.slice(0, 2)) {
+    await sleep(1000); // Respect OSM 1 req/sec policy
+    const res = await fetchNominatim(q);
+    if (res) {
+      cache[cacheKey] = res;
+      return res;
+    }
+  }
+
+  // Tier 3: ESRI
+  for (const q of queries.slice(0, 2)) {
+    const res = await fetchEsri(q);
+    if (res) {
+      cache[cacheKey] = res;
+      return res;
+    }
+  }
+
+  // Tier 4: Fallback to District Centroid + Deterministic Jitter
+  let center = DISTRICT_CENTERS[district] || DISTRICT_CENTERS[normDistrict];
   if (!center) {
     for (const [key, val] of Object.entries(DISTRICT_CENTERS)) {
-      if (districtName.includes(key) || key.includes(districtName)) {
+      if (district.includes(key) || key.includes(district)) {
         center = val;
         break;
       }
     }
   }
   if (!center) center = { lat: DEFAULT_MAP_CENTER[0], lng: DEFAULT_MAP_CENTER[1] };
+
   const char1 = name ? name.charCodeAt(0) : 0;
   const charLast = name ? name.charCodeAt(name.length - 1) : 0;
-  const jitterLat = ((char1 % 9) - 4) * 0.0008;
-  const jitterLng = ((charLast % 7) - 3) * 0.0008;
-  return {
+  const jitterLat = ((char1 % 9) - 4) * 0.0006;
+  const jitterLng = ((charLast % 7) - 3) * 0.0006;
+
+  const fallbackResult = {
     lat: Number((center.lat + jitterLat).toFixed(6)),
-    lng: Number((center.lng + jitterLng).toFixed(6))
+    lng: Number((center.lng + jitterLng).toFixed(6)),
+    source: "district_fallback"
   };
+  cache[cacheKey] = fallbackResult;
+  return fallbackResult;
 }
 
-function parseExcel() {
-  const wb = XLSX.readFile("Eat with mi.xlsx");
-  const items = [];
-  let idCounter = 1;
+async function loadCache() {
+  try {
+    if (existsSync(CACHE_PATH)) {
+      const data = await readFile(CACHE_PATH, "utf8");
+      return JSON.parse(data);
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
 
-  // 1. Parse 'quán ăn'
+async function saveCache(cache) {
+  try {
+    if (!existsSync("./data")) {
+      await mkdir("./data", { recursive: true });
+    }
+    await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2), "utf8");
+  } catch (err) {
+    console.warn("Failed to save geocode cache:", err.message);
+  }
+}
+
+async function main() {
+  console.log("🍜 EatWithMe — Intelligent Multi-Tier Geocoder");
+  console.log("Reading 'Eat with mi.xlsx'...\n");
+
+  const wb = XLSX.readFile("Eat with mi.xlsx");
+  const cache = await loadCache();
+  const places = [];
+  let idCounter = 1;
+  const stats = { photon: 0, nominatim: 0, esri: 0, landmark: 0, district_fallback: 0, cached: 0 };
+
+  // 1. Process 'quán ăn'
   const qaRows = XLSX.utils.sheet_to_json(wb.Sheets['quán ăn'], { header: 1 });
   let currentDistrict = "Quận 1";
 
@@ -193,9 +322,14 @@ function parseExcel() {
 
     const theme = getCategoryTheme(category);
     const fullAddress = rawAddress ? `${rawAddress}, ${currentDistrict}, TP. HCM` : `${currentDistrict}, TP. HCM`;
-    const coords = geocodeByStreet(rawAddress, currentDistrict, name);
 
-    items.push({
+    process.stdout.write(`[${idCounter}] Geocoding: ${name} (${rawAddress || currentDistrict})... `);
+    const coords = await geocodePlace(name, rawAddress, currentDistrict, cache);
+    if (coords.fromCache) stats.cached++;
+    stats[coords.source] = (stats[coords.source] || 0) + 1;
+    console.log(`✓ [${coords.source}] (${coords.lat}, ${coords.lng})`);
+
+    places.push({
       id: `place-mi-${idCounter++}`,
       name,
       category,
@@ -215,7 +349,7 @@ function parseExcel() {
     });
   }
 
-  // 2. Parse 'nước'
+  // 2. Process 'nước'
   const nuocRows = XLSX.utils.sheet_to_json(wb.Sheets['nước'], { header: 1 });
   currentDistrict = "Quận 1";
 
@@ -237,9 +371,14 @@ function parseExcel() {
 
     const theme = getCategoryTheme("Cafe");
     const fullAddress = rawAddress ? `${rawAddress}, ${currentDistrict}, TP. HCM` : `${currentDistrict}, TP. HCM`;
-    const coords = geocodeByStreet(rawAddress, currentDistrict, name);
 
-    items.push({
+    process.stdout.write(`[${idCounter}] Geocoding: ${name} (${rawAddress || currentDistrict})... `);
+    const coords = await geocodePlace(name, rawAddress, currentDistrict, cache);
+    if (coords.fromCache) stats.cached++;
+    stats[coords.source] = (stats[coords.source] || 0) + 1;
+    console.log(`✓ [${coords.source}] (${coords.lat}, ${coords.lng})`);
+
+    places.push({
       id: `place-mi-${idCounter++}`,
       name,
       category: "Cafe",
@@ -259,14 +398,19 @@ function parseExcel() {
     });
   }
 
-  return items;
-}
+  await saveCache(cache);
 
-async function main() {
-  console.log("📊 Parsing places from 'Eat with mi.xlsx'...");
-  const places = parseExcel();
-  console.log(`Parsed ${places.length} places with street-accurate geocoded coordinates.\n`);
+  console.log("\n================ Geocoding Summary ================");
+  console.log(`Total places processed: ${places.length}`);
+  console.log(`- Landmark exact:      ${stats.landmark || 0}`);
+  console.log(`- Photon (OSM fast):    ${stats.photon || 0}`);
+  console.log(`- Nominatim (OSM full): ${stats.nominatim || 0}`);
+  console.log(`- ESRI World:           ${stats.esri || 0}`);
+  console.log(`- District fallback:    ${stats.district_fallback || 0}`);
+  console.log(`- Loaded from Cache:    ${stats.cached || 0}`);
+  console.log("===================================================\n");
 
+  // Update app.js
   const appJs = await readFile("app.js", "utf8");
   const formattedJson = JSON.stringify(places, null, 2);
   const updatedAppJs = appJs.replace(
@@ -275,7 +419,7 @@ async function main() {
   );
 
   await writeFile("app.js", updatedAppJs);
-  console.log("✅ Successfully updated app.js with 202 fresh Excel places & geocoded coordinates!");
+  console.log("✅ Successfully updated app.js with 100% geocoded places!");
 }
 
 main().catch((err) => {
