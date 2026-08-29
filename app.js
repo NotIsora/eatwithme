@@ -3917,102 +3917,13 @@ function localGeocodeFallback(query) {
 async function geocodeLocation(query, options = {}) {
   const q = (query || "").trim();
   if (!q) return [];
-
-  const lat = options.lat || (mapState.userPosition ? mapState.userPosition[0] : DEFAULT_MAP_CENTER[0]);
-  const lng = options.lng || (mapState.userPosition ? mapState.userPosition[1] : DEFAULT_MAP_CENTER[1]);
-
-  if (!navigator.onLine) {
-    return localGeocodeFallback(q);
-  }
-
-  // 1. Try Photon (OpenStreetMap geocoding API)
-  try {
-    const url = `${GEOCODE_API_URL}?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=6`;
-    const res = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(4000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        return data.features.map((f) => {
-          const props = f.properties || {};
-          const coords = f.geometry?.coordinates || [lng, lat];
-          const parts = [
-            props.name,
-            props.housenumber ? `${props.housenumber} ${props.street || ""}`.trim() : props.street,
-            props.district || props.suburb || props.locality,
-            props.city || props.state || "TP. Hồ Chí Minh"
-          ].filter(Boolean);
-          const fullAddress = Array.from(new Set(parts)).join(", ");
-          return {
-            name: props.name || props.street || q,
-            address: fullAddress || q,
-            lat: Number(coords[1].toFixed(5)),
-            lng: Number(coords[0].toFixed(5)),
-            district: props.district || props.suburb || "",
-          };
-        });
-      }
-    }
-  } catch {
-    // Fallback to Nominatim or local offline
-  }
-
-  // 2. Fallback to OpenStreetMap Nominatim
-  try {
-    const nomUrl = `${NOMINATIM_SEARCH_URL}?q=${encodeURIComponent(q + ", Hồ Chí Minh, Việt Nam")}&format=json&addressdetails=1&limit=5&countrycodes=vn`;
-    const res = await fetch(nomUrl, {
-      headers: { "Accept": "application/json", "User-Agent": "EatWithMeApp/1.0" },
-      signal: AbortSignal.timeout(4000)
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data.map((item) => ({
-          name: item.name || item.display_name?.split(",")[0] || q,
-          address: item.display_name,
-          lat: Number(parseFloat(item.lat).toFixed(5)),
-          lng: Number(parseFloat(item.lon).toFixed(5)),
-          district: item.address?.suburb || item.address?.district || "",
-        }));
-      }
-    }
-  } catch {
-    //
-  }
-
-  // 3. Local offline fallback if network fails
   return localGeocodeFallback(q);
 }
 
 async function reverseGeocodeLocation(lat, lng) {
-  try {
-    const url = `${NOMINATIM_REVERSE_URL}?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-    const res = await fetch(url, {
-      headers: { "Accept": "application/json", "User-Agent": "EatWithMeApp/1.0" },
-      signal: AbortSignal.timeout(4000)
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const addr = data.address || {};
-      const road = addr.road || addr.street || "";
-      const houseNumber = addr.house_number || "";
-      const suburb = addr.suburb || addr.quarter || addr.district || "";
-      const city = addr.city || addr.state || "TP. Hồ Chí Minh";
-      const parts = [
-        houseNumber ? `${houseNumber} ${road}`.trim() : road,
-        suburb,
-        city
-      ].filter(Boolean);
-      return {
-        formattedAddress: parts.join(", ") || data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-        district: suburb,
-      };
-    }
-  } catch {
-    //
-  }
   return {
     formattedAddress: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-    district: "",
+    district: "TP. HCM",
   };
 }
 
@@ -4864,26 +4775,10 @@ function buildInteractiveMap(L) {
     zoomDelta: 0.5,
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
-  // Always attach the local offline canvas layer first so the interactive map works 100% locally offline
+  // 100% Local Offline Canvas Tile Layer - Zero external tile requests or API keys required
   createLocalOfflineGridLayer(L).addTo(map);
-
-  const tiles = L.tileLayer(MAP_TILE_URL, {
-    minZoom: MAP_MIN_ZOOM,
-    maxZoom: MAP_MAX_ZOOM,
-    subdomains: MAP_TILE_SUBDOMAINS,
-    attribution: MAP_TILE_ATTRIBUTION,
-  }).addTo(map);
-
-  tiles.on("tileerror", () => {
-    mapState.tilesLoaded = true;
-    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
-    updateMapCaption("Bản đồ cục bộ (Offline Canvas Mode)");
-  });
-
-  tiles.once("load", () => {
-    mapState.tilesLoaded = true;
-    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
-  });
+  mapState.tilesLoaded = true;
+  if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
 
   map.on("click", (e) => {
     if (mapState.isPickingLocation) {
@@ -5090,58 +4985,11 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
 }
 
 async function fetchIpLocation() {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 2500);
-
-  try {
-    const res = await fetch("https://freeipapi.com/api/json", {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
-        window.clearTimeout(timer);
-        return {
-          lat: data.latitude,
-          lng: data.longitude,
-          city: data.cityName || data.regionName || "Hà Nội",
-          source: "ip-freeipapi",
-        };
-      }
-    }
-  } catch {
-    /* try next */
-  }
-
-  try {
-    const response = await fetch("https://ipwho.is/", {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
-        window.clearTimeout(timer);
-        return {
-          lat: data.latitude,
-          lng: data.longitude,
-          city: data.city || "Khu vực mạng",
-          source: "ip-whois",
-        };
-      }
-    }
-  } catch {
-    /* ignore */
-  } finally {
-    window.clearTimeout(timer);
-  }
-
   return {
-    lat: 10.7769,
-    lng: 106.7009,
+    lat: DEFAULT_MAP_CENTER[0],
+    lng: DEFAULT_MAP_CENTER[1],
     city: "TP. Hồ Chí Minh",
-    source: "default",
+    source: "local-default",
   };
 }
 
