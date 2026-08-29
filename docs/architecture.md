@@ -4,7 +4,7 @@
 
 EatWithMe is a 100% local-first personal food map app. It requires **zero map API keys** for runtime map rendering and place discovery:
 
-1. **Map Tiles:** CartoDB Voyager (`https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png`) over OpenStreetMap data rendered via Leaflet 1.9.4.
+1. **Map Tiles:** OpenStreetMap (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`) + Local Canvas Offline Renderer (`Offline Canvas Mode`) rendered via Leaflet 1.9.4. Zero API key required.
 2. **Keyless Geocoding Engine:** Multi-tier geocoding pipeline (`scripts/import-excel-geocode.mjs` and client fallbacks) using Photon OSM (with Saigon proximity bias), Nominatim, and ESRI ArcGIS.
 3. **Manual Coordinates:** Direct Google Maps URL coordinate parser and update endpoint (`/api/save-place` in `server.mjs`) used by `scripts/verify-google-maps.html`.
 

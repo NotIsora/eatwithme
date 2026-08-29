@@ -3826,10 +3826,9 @@ const CITIES = {
   hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: MAP_DEFAULT_ZOOM },
   danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
 };
-const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png";
-const MAP_LABEL_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png";
-const MAP_TILE_SUBDOMAINS = ["a", "b", "c", "d"];
-const MAP_TILE_ATTRIBUTION = "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\" target=\"_blank\">CARTO</a>";
+const MAP_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const MAP_TILE_SUBDOMAINS = ["a", "b", "c"];
+const MAP_TILE_ATTRIBUTION = "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors";
 
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
@@ -4873,14 +4872,6 @@ function buildInteractiveMap(L) {
     maxZoom: MAP_MAX_ZOOM,
     subdomains: MAP_TILE_SUBDOMAINS,
     attribution: MAP_TILE_ATTRIBUTION,
-  }).addTo(map);
-
-  L.tileLayer(MAP_LABEL_TILE_URL, {
-    minZoom: MAP_MIN_ZOOM,
-    maxZoom: MAP_MAX_ZOOM,
-    subdomains: MAP_TILE_SUBDOMAINS,
-    opacity: 0.95,
-    zIndex: 2,
   }).addTo(map);
 
   tiles.on("tileerror", () => {
