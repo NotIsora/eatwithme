@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/eatwithme-mvp
   workflow_dispatch:
 
 permissions:
