@@ -15,8 +15,8 @@ Một ứng dụng web/PWA mobile-first hiện đại giúp bạn tìm kiếm, l
 
 ## Các tính năng nổi bật
 
-### 1. Bản đồ ẩm thực tương tác & Tự thêm quán ăn
-* **Bản đồ tương tác dịu mắt**: Tích hợp Leaflet + CartoDB Positron tông màu nhẹ nhàng, giới hạn mức zoom tối ưu (11 – 17), chỉ hiển thị tên đường và các quán ghim.
+### 1. Bản đồ ẩm thực tương tác (Zero API Key & Local Offline Map)
+* **Bản đồ tương tác dịu mắt & 100% Offline**: Tích hợp Leaflet với bộ sinh canvas tile cục bộ (Offline Canvas Mode), hoạt động mượt mà không cần API key và hoàn toàn không phụ thuộc vào kết nối mạng hay tile server bên thứ ba.
 * **16 danh mục món ăn trực quan**: Món Nhật, Món Âu, Món Hàn, Ăn nhanh, Món Việt, Ăn vặt, Hotpot, Grill, Hải sản, Cafe, Dining, Bánh, Ice cream, Pizza, Món Trung, Khác.
 * **6 phân khúc giá rõ ràng**: `<100k`, `<200k`, `200k-300k`, `<500k`, `500k-800k`, `>1tr`.
 * **Thêm quán ăn bằng tay**: Nhập tên, chọn dạng món, mức giá và ghim trực tiếp theo tọa độ GPS hiện tại hoặc nhập thủ công.

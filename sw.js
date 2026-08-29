@@ -1,6 +1,6 @@
 // Bump this whenever the app shell changes so an older cached app.js cannot
 // hide newly shipped features such as the interactive map.
-const CACHE_NAME = "eatwithme-shell-v52";
+const CACHE_NAME = "eatwithme-shell-v53";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,8 @@ const APP_SHELL = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
 ];
 const NETWORK_FIRST_PATHS = new Set([
   "",
@@ -42,7 +44,7 @@ self.addEventListener("fetch", (event) => {
   if (NETWORK_FIRST_PATHS.has(requestUrl.pathname)) {
     event.respondWith(
       fetch(event.request).then((response) => {
-        if (response.ok && requestUrl.origin === self.location.origin) {
+        if (response.ok && (requestUrl.origin === self.location.origin || requestUrl.hostname === "unpkg.com")) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
@@ -54,7 +56,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request).then((response) => {
-        if (response.ok && requestUrl.origin === self.location.origin) {
+        if (response.ok && (requestUrl.origin === self.location.origin || requestUrl.hostname === "unpkg.com")) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }

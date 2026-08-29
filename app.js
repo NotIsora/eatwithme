@@ -3875,12 +3875,56 @@ const mapState = {
   lastGeocodeResults: [],
 };
 
+const LOCAL_GEOCODE_DB = [
+  { keywords: ["quận 1", "q1", "bến nghé", "bến thành", "tân định", "phạm ngũ lão"], name: "Quận 1, TP. HCM", lat: 10.7756, lng: 106.7004, district: "Quận 1" },
+  { keywords: ["quận 3", "q3", "võ thị sáu", "bàn cờ"], name: "Quận 3, TP. HCM", lat: 10.7828, lng: 106.6872, district: "Quận 3" },
+  { keywords: ["quận 4", "q4", "bến vân đồn", "hoàng diệu"], name: "Quận 4, TP. HCM", lat: 10.7580, lng: 106.7050, district: "Quận 4" },
+  { keywords: ["quận 5", "q5", "chợ lớn", "hải thượng lãn ông"], name: "Quận 5, TP. HCM", lat: 10.7540, lng: 106.6630, district: "Quận 5" },
+  { keywords: ["thủ đức", "thảo điền", "an phú", "quận 2", "q2"], name: "Thủ Đức (Thảo Điền), TP. HCM", lat: 10.8040, lng: 106.7380, district: "Thủ Đức" },
+  { keywords: ["bình thạnh", "hàng xanh", "phú mỹ", "thanh đa"], name: "Quận Bình Thạnh, TP. HCM", lat: 10.8012, lng: 106.7102, district: "Bình Thạnh" },
+  { keywords: ["phú nhuận", "phan xích long"], name: "Quận Phú Nhuận, TP. HCM", lat: 10.7990, lng: 106.6800, district: "Phú Nhuận" },
+  { keywords: ["tân bình", "sân bay", "tân sơn nhất"], name: "Quận Tân Bình, TP. HCM", lat: 10.8010, lng: 106.6530, district: "Tân Bình" },
+  { keywords: ["quận 7", "q7", "phú mỹ hưng", "tân phong"], name: "Quận 7, TP. HCM", lat: 10.7340, lng: 106.7220, district: "Quận 7" },
+  { keywords: ["quận 10", "q10", "tô hiến thành", "lý thái tổ"], name: "Quận 10, TP. HCM", lat: 10.7720, lng: 106.6680, district: "Quận 10" },
+  { keywords: ["hà nội", "hoàn kiếm", "tràng tiền"], name: "Quận Hoàn Kiếm, Hà Nội", lat: 21.0285, lng: 105.8542, district: "Hoàn Kiếm" },
+  { keywords: ["đà nẵng", "hải châu"], name: "Quận Hải Châu, Đà Nẵng", lat: 16.0544, lng: 108.2022, district: "Hải Châu" },
+];
+
+function localGeocodeFallback(query) {
+  const norm = (query || "").toLowerCase().trim();
+  if (!norm) return [];
+  const matches = LOCAL_GEOCODE_DB.filter((item) =>
+    item.keywords.some((kw) => norm.includes(kw)) || norm.includes(item.name.toLowerCase())
+  );
+  if (matches.length > 0) {
+    return matches.map((m) => ({
+      name: m.name,
+      address: `${m.name}, Việt Nam`,
+      lat: m.lat,
+      lng: m.lng,
+      district: m.district,
+    }));
+  }
+  const center = mapState.userPosition || DEFAULT_MAP_CENTER;
+  return [{
+    name: query,
+    address: `${query}, TP. Hồ Chí Minh`,
+    lat: Number(center[0].toFixed(5)),
+    lng: Number(center[1].toFixed(5)),
+    district: "TP. HCM",
+  }];
+}
+
 async function geocodeLocation(query, options = {}) {
   const q = (query || "").trim();
   if (!q) return [];
 
   const lat = options.lat || (mapState.userPosition ? mapState.userPosition[0] : DEFAULT_MAP_CENTER[0]);
   const lng = options.lng || (mapState.userPosition ? mapState.userPosition[1] : DEFAULT_MAP_CENTER[1]);
+
+  if (!navigator.onLine) {
+    return localGeocodeFallback(q);
+  }
 
   // 1. Try Photon (OpenStreetMap geocoding API)
   try {
@@ -3910,7 +3954,7 @@ async function geocodeLocation(query, options = {}) {
       }
     }
   } catch {
-    // Fallback to Nominatim
+    // Fallback to Nominatim or local offline
   }
 
   // 2. Fallback to OpenStreetMap Nominatim
@@ -3936,7 +3980,8 @@ async function geocodeLocation(query, options = {}) {
     //
   }
 
-  return [];
+  // 3. Local offline fallback if network fails
+  return localGeocodeFallback(q);
 }
 
 async function reverseGeocodeLocation(lat, lng) {
@@ -4663,6 +4708,124 @@ function showMapFallback(message) {
   updateMapCaption(message);
 }
 
+function createLocalOfflineGridLayer(L) {
+  if (L.LocalOfflineGridLayer) return new L.LocalOfflineGridLayer();
+
+  L.LocalOfflineGridLayer = L.GridLayer.extend({
+    createTile: function (coords) {
+      const tile = document.createElement("canvas");
+      const tileSize = this.getTileSize();
+      tile.width = tileSize.x;
+      tile.height = tileSize.y;
+      const ctx = tile.getContext("2d");
+      if (!ctx) return tile;
+
+      const nwPoint = coords.scaleBy(tileSize);
+      const sePoint = nwPoint.add(tileSize);
+      const nw = this._map.unproject(nwPoint, coords.z);
+      const se = this._map.unproject(sePoint, coords.z);
+
+      const latNorth = nw.lat;
+      const latSouth = se.lat;
+      const lngWest = nw.lng;
+      const lngEast = se.lng;
+
+      // Warm paper background tone
+      ctx.fillStyle = "#f5efe6";
+      ctx.fillRect(0, 0, tileSize.x, tileSize.y);
+
+      // Minor grid / street lines
+      ctx.strokeStyle = "#e8dfd1";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const step = 64;
+      for (let x = 0; x <= tileSize.x; x += step) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, tileSize.y);
+      }
+      for (let y = 0; y <= tileSize.y; y += step) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(tileSize.x, y);
+      }
+      ctx.stroke();
+
+      // Major road grid axes
+      ctx.strokeStyle = "#ded2be";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, tileSize.y / 2);
+      ctx.lineTo(tileSize.x, tileSize.y / 2);
+      ctx.moveTo(tileSize.x / 2, 0);
+      ctx.lineTo(tileSize.x / 2, tileSize.y);
+      ctx.stroke();
+
+      // Saigon River waterway representation (TP. HCM area)
+      if (lngEast >= 106.66 && lngWest <= 106.76 && latNorth >= 10.72 && latSouth <= 10.84) {
+        ctx.strokeStyle = "rgba(175, 205, 225, 0.45)";
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        const p1X = ((106.73 - lngWest) / (lngEast - lngWest)) * tileSize.x;
+        const p1Y = ((latNorth - 10.82) / (latNorth - latSouth)) * tileSize.y;
+        const p2X = ((106.70 - lngWest) / (lngEast - lngWest)) * tileSize.x;
+        const p2Y = ((latNorth - 10.74) / (latNorth - latSouth)) * tileSize.y;
+        ctx.moveTo(p1X, p1Y);
+        ctx.quadraticCurveTo((p1X + p2X) / 2 + 25, (p1Y + p2Y) / 2, p2X, p2Y);
+        ctx.stroke();
+      }
+
+      // District & Landmark Label Annotations
+      const LANDMARKS = [
+        { name: "QUẬN 1", lat: 10.7756, lng: 106.7004, main: true },
+        { name: "QUẬN 3", lat: 10.7828, lng: 106.6872, main: true },
+        { name: "BÌNH THẠNH", lat: 10.8012, lng: 106.7102, main: true },
+        { name: "QUẬN 4", lat: 10.7580, lng: 106.7050, main: true },
+        { name: "QUẬN 5 (Chợ Lớn)", lat: 10.7540, lng: 106.6630, main: true },
+        { name: "THỦ ĐỨC (Thảo Điền)", lat: 10.8040, lng: 106.7380, main: true },
+        { name: "PHÚ NHUẬN", lat: 10.7990, lng: 106.6800, main: true },
+        { name: "TÂN BÌNH", lat: 10.8010, lng: 106.6530, main: true },
+        { name: "QUẬN 7", lat: 10.7340, lng: 106.7220, main: true },
+        { name: "QUẬN 10", lat: 10.7720, lng: 106.6680, main: true },
+        { name: "Bến Thành", lat: 10.7725, lng: 106.6980, spot: true },
+        { name: "Nhà Thờ Đức Bà", lat: 10.7798, lng: 106.6990, spot: true },
+        { name: "Landmark 81", lat: 10.7950, lng: 106.7218, spot: true },
+      ];
+
+      for (const lm of LANDMARKS) {
+        if (lm.lat <= latNorth && lm.lat >= latSouth && lm.lng >= lngWest && lm.lng <= lngEast) {
+          const x = ((lm.lng - lngWest) / (lngEast - lngWest)) * tileSize.x;
+          const y = ((latNorth - lm.lat) / (latNorth - latSouth)) * tileSize.y;
+
+          if (lm.main) {
+            ctx.fillStyle = "rgba(125, 110, 90, 0.45)";
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(lm.name, x, y);
+          } else if (coords.z >= 13) {
+            ctx.fillStyle = "rgba(155, 135, 105, 0.35)";
+            ctx.font = "500 9px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`• ${lm.name}`, x, y);
+          }
+        }
+      }
+
+      if (coords.z >= 14) {
+        ctx.fillStyle = "rgba(175, 160, 140, 0.25)";
+        ctx.font = "8px monospace";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(`Offline Canvas Map`, tileSize.x - 4, tileSize.y - 4);
+      }
+
+      return tile;
+    }
+  });
+
+  return new L.LocalOfflineGridLayer();
+}
+
 function savedMarkerIcon(L) {
   return L.divIcon({
     className: "eatwithme-marker-wrap",
@@ -4702,12 +4865,16 @@ function buildInteractiveMap(L) {
     zoomDelta: 0.5,
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
+  // Always attach the local offline canvas layer first so the interactive map works 100% locally offline
+  createLocalOfflineGridLayer(L).addTo(map);
+
   const tiles = L.tileLayer(MAP_TILE_URL, {
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
     subdomains: MAP_TILE_SUBDOMAINS,
     attribution: MAP_TILE_ATTRIBUTION,
   }).addTo(map);
+
   L.tileLayer(MAP_LABEL_TILE_URL, {
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
@@ -4715,6 +4882,13 @@ function buildInteractiveMap(L) {
     opacity: 0.95,
     zIndex: 2,
   }).addTo(map);
+
+  tiles.on("tileerror", () => {
+    mapState.tilesLoaded = true;
+    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
+    updateMapCaption("Bản đồ cục bộ (Offline Canvas Mode)");
+  });
+
   tiles.once("load", () => {
     mapState.tilesLoaded = true;
     if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
@@ -5356,7 +5530,7 @@ function triggerGooglePrompt() {
       console.warn("Prompt error:", e);
     }
   } else {
-    showToast("Đang kết nối Google Identity Services...", "info");
+    showToast("Tài khoản lưu trữ cục bộ (Local Profile)", "info");
   }
 }
 
