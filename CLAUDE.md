@@ -39,7 +39,7 @@ The application logic resides primarily in `app.js` (~6,000 lines), organized in
    - Single-direction full app re-renders via `renderApp()`.
    - Delegated action dispatcher `handleAction(event)` switching on `data-action`.
 5. **Map & Geolocation:**
-   - Leaflet 1.9.4 with CartoDB Voyager tiles (`voyager_nolabels` and `voyager_only_labels`).
+   - Leaflet 1.9.4 with 100% Local Offline Canvas Tile Layer (`LocalOfflineGridLayer`, zero API keys or external tile servers).
    - Hybrid geolocation engine with Capacitor Geolocation, browser GPS, and IP fallback.
    - Dynamic Haversine distance calculations.
 

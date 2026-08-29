@@ -3826,9 +3826,7 @@ const CITIES = {
   hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: MAP_DEFAULT_ZOOM },
   danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
 };
-const MAP_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-const MAP_TILE_SUBDOMAINS = ["a", "b", "c"];
-const MAP_TILE_ATTRIBUTION = "&copy; <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">OpenStreetMap</a> contributors";
+const MAP_TILE_ATTRIBUTION = "EatWithMe · Bản đồ cục bộ (Local Offline Map)";
 
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
