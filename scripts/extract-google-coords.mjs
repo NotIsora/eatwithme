@@ -96,6 +96,16 @@ export function parseGoogleMapsCoordinates(input) {
     }
   }
 
+  // 6. Check Google Maps window data array patterns: [10.xxxx, 106.xxxx] or [null, null, 10.xxxx, 106.xxxx]
+  const arrMatch = input.match(/\[(?:null,\s*)*(10\.[0-9]{4,10}),\s*(106\.[0-9]{4,10})\]/);
+  if (arrMatch) {
+    const lat = parseFloat(arrMatch[1]);
+    const lng = parseFloat(arrMatch[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "google_array" };
+    }
+  }
+
   return null;
 }
 
