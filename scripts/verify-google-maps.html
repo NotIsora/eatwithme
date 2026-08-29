@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <style>
     :root {
       --canvas: #f7f2e9;
@@ -27,36 +28,47 @@
       font-family: 'DM Sans', sans-serif;
       background: var(--canvas);
       color: var(--ink);
-      padding: 24px;
+      padding: 16px;
       line-height: 1.5;
     }
     header {
-      max-width: 1200px;
-      margin: 0 auto 24px;
+      max-width: 1400px;
+      margin: 0 auto 16px;
       background: var(--paper);
-      padding: 24px;
+      padding: 20px;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       border: 1px solid var(--line);
     }
     h1 {
       font-family: 'Fraunces', serif;
-      font-size: 26px;
+      font-size: 24px;
       color: var(--coral-dark);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
+    .warning-banner {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .warning-banner.show { display: block; }
     .stats-bar {
       display: flex;
-      gap: 16px;
-      margin-top: 16px;
+      gap: 12px;
+      margin-top: 12px;
       flex-wrap: wrap;
     }
     .stat-item {
       background: var(--paper-soft);
       border: 1px solid var(--line);
-      padding: 8px 16px;
+      padding: 6px 14px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
     }
     .stat-item span {
@@ -64,21 +76,22 @@
       color: var(--coral);
     }
     .actions-bar {
-      margin-top: 16px;
+      margin-top: 12px;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     button {
       background: var(--coral);
       color: #fff;
       border: none;
-      padding: 10px 18px;
+      padding: 8px 16px;
       border-radius: 8px;
       font-family: inherit;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      font-size: 13px;
     }
     button:hover { background: var(--coral-dark); }
     button.secondary {
@@ -88,31 +101,59 @@
     }
     button.secondary:hover { background: var(--line); }
     .search-input {
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 8px;
       border: 1px solid var(--line);
       font-family: inherit;
-      font-size: 14px;
+      font-size: 13px;
       flex: 1;
-      min-width: 250px;
+      min-width: 200px;
     }
-    .grid {
-      max-width: 1200px;
+    .app-layout {
+      max-width: 1400px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      grid-template-columns: 1fr 1fr;
       gap: 16px;
+      height: calc(100vh - 200px);
+      min-height: 550px;
+    }
+    @media (max-width: 900px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .map-container {
+        height: 400px !important;
+      }
+    }
+    .places-list-container {
+      overflow-y: auto;
+      padding-right: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .card {
       background: var(--paper);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 14px;
       box-shadow: var(--shadow);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       position: relative;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      border-color: var(--coral);
+    }
+    .card.active {
+      border: 2px solid var(--coral);
+      background: #fffdfb;
+      box-shadow: 0 4px 14px rgba(229, 93, 66, 0.15);
     }
     .card-header {
       display: flex;
@@ -121,12 +162,12 @@
     }
     .card-title {
       font-weight: 700;
-      font-size: 16px;
+      font-size: 15px;
       color: var(--ink);
     }
     .card-badge {
-      font-size: 12px;
-      padding: 3px 8px;
+      font-size: 11px;
+      padding: 2px 8px;
       border-radius: 6px;
       font-weight: 600;
       background: #eef7f2;
@@ -137,35 +178,73 @@
       color: var(--gold);
     }
     .card-meta {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--ink-muted);
     }
-    .coord-display {
-      font-family: monospace;
-      font-size: 12px;
+    .coord-inputs {
+      display: flex;
+      gap: 8px;
       background: var(--paper-soft);
       padding: 6px 10px;
       border-radius: 6px;
       border: 1px solid var(--line);
-      display: flex;
-      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .coord-inputs label { font-weight: 600; }
+    .coord-inputs input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-family: monospace;
+      font-size: 12px;
     }
     .paste-box {
       width: 100%;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
       border: 1px solid var(--line);
       font-family: inherit;
-      font-size: 13px;
+      font-size: 12px;
     }
     .btn-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
     .btn-row button {
       flex: 1;
-      padding: 8px;
+      padding: 6px;
+      font-size: 12px;
+    }
+    .map-container {
+      background: var(--paper);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 16px;
+      height: 100%;
+      min-height: 500px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .map-header {
+      background: var(--paper-soft);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 600;
       font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
     }
     .toast {
       position: fixed;
@@ -173,12 +252,12 @@
       right: 24px;
       background: var(--ink);
       color: #fff;
-      padding: 12px 20px;
+      padding: 10px 18px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
+      z-index: 2000;
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.3s ease;
@@ -188,31 +267,25 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .toast.error {
-      background: var(--coral-dark);
-    }
+    .toast.error { background: var(--coral-dark); }
     .status-msg {
-      font-size: 12px;
-      margin-top: 4px;
+      font-size: 11px;
       font-weight: 500;
       display: none;
     }
-    .status-msg.show {
-      display: block;
-    }
-    .status-msg.success {
-      color: var(--herb);
-    }
-    .status-msg.err {
-      color: var(--coral-dark);
-    }
+    .status-msg.show { display: block; }
+    .status-msg.success { color: var(--herb); }
+    .status-msg.err { color: var(--coral-dark); }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>🗺️ Trình Kiểm Tra & Lấy Tọa Độ Google Maps</h1>
-    <p>Mở liên kết tìm kiếm trên Google Maps, copy URL có chứa <code>/@10.xxx,106.xxx/</code> hoặc <code>!3d...!4d...</code> và dán vào ô bên dưới.</p>
+    <h1>🗺️ Trình Kiểm Tra & Lấy Tọa Độ Google Maps (EatWithMe)</h1>
+    <div id="protocol-warning" class="warning-banner">
+      ⚠️ <strong>Đang mở file trực tiếp (file://):</strong> Để tự động lưu tọa độ vào server local và cập nhật dataset, vui lòng khởi động server bằng lệnh <code>npm start</code> và mở địa chỉ <a href="http://localhost:4173/scripts/verify-google-maps.html">http://localhost:4173/scripts/verify-google-maps.html</a>.
+    </div>
+    <p style="font-size: 13px; color: var(--ink-muted);">Click vào một địa điểm bất kỳ bên trái để xem trên Bản Đồ bên phải. Bạn có thể <strong>kéo ghim (drag pin)</strong> hoặc <strong>click trực tiếp lên bản đồ</strong> để chọn vị trí chính xác!</p>
 
     <div class="stats-bar">
       <div class="stat-item">Tổng số quán: <span id="stat-total">0</span></div>
@@ -227,31 +300,220 @@
     </div>
   </header>
 
-  <div id="places-grid" class="grid"></div>
+  <div class="app-layout">
+    <div id="places-grid" class="places-list-container"></div>
+    <div class="map-container">
+      <div class="map-header">
+        <span id="map-target-title">📍 Chọn một địa điểm để căn chỉnh tọa độ</span>
+        <span id="map-target-coords" style="font-family: monospace; font-size: 12px; color: var(--coral-dark);"></span>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script type="module">
     import { parseGoogleMapsCoordinates, isValidHcmcCoordinate } from "./extract-google-coords.mjs";
 
     let places = [];
+    let activePlaceId = null;
+    let map = null;
+    let marker = null;
+
+    // Direct fallback coordinate parser in case ES import fails
+    function fallbackParseCoords(input) {
+      if (typeof parseGoogleMapsCoordinates === "function") {
+        return parseGoogleMapsCoordinates(input);
+      }
+      if (!input || typeof input !== "string") return null;
+      const atMatch = input.match(/@([0-9.-]+),([0-9.-]+)/);
+      if (atMatch) {
+        const lat = parseFloat(atMatch[1]), lng = parseFloat(atMatch[2]);
+        if (lat >= 10.3 && lat <= 11.2 && lng >= 106.3 && lng <= 107.1) {
+          return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "@lat,lng" };
+        }
+      }
+      const dataMatch = input.match(/!3d([0-9.-]+)!4d([0-9.-]+)/);
+      if (dataMatch) {
+        const lat = parseFloat(dataMatch[1]), lng = parseFloat(dataMatch[2]);
+        if (lat >= 10.3 && lat <= 11.2 && lng >= 106.3 && lng <= 107.1) {
+          return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "!3d!4d" };
+        }
+      }
+      const rawMatch = input.match(/([1][0-1]\.[0-9]{2,10})[,\s]+([1][0][6-7]\.[0-9]{2,10})/);
+      if (rawMatch) {
+        const lat = parseFloat(rawMatch[1]), lng = parseFloat(rawMatch[2]);
+        if (lat >= 10.3 && lat <= 11.2 && lng >= 106.3 && lng <= 107.1) {
+          return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "raw_text" };
+        }
+      }
+      return null;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
     function showToast(msg, isError = false) {
       const toast = document.getElementById("toast");
       toast.innerText = msg;
       toast.className = isError ? "toast show error" : "toast show";
-      setTimeout(() => {
-        toast.className = "toast";
-      }, 3000);
+      setTimeout(() => { toast.className = "toast"; }, 3000);
+    }
+
+    function initMap() {
+      // Initialize Leaflet map centered at HCMC District 1
+      map = L.map('map').setView([10.7769, 106.7009], 14);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Marker for place selection
+      marker = L.marker([10.7769, 106.7009], { draggable: true }).addTo(map);
+
+      marker.on('dragend', function (e) {
+        const position = marker.getLatLng();
+        updateActivePlaceCoords(position.lat, position.lng, "leaflet_drag");
+      });
+
+      map.on('click', function (e) {
+        if (!activePlaceId) return;
+        marker.setLatLng(e.latlng);
+        updateActivePlaceCoords(e.latlng.lat, e.latlng.lng, "leaflet_click");
+      });
     }
 
     async function init() {
-      try {
-        const res = await fetch("../data/google-maps-places.json");
-        places = await res.json();
-      } catch (err) {
-        console.warn("Falling back to embedded places:", err);
+      if (window.location.protocol === "file:") {
+        document.getElementById("protocol-warning").classList.add("show");
       }
+
+      initMap();
+
+      try {
+        const res = await fetch("/api/google-maps-places");
+        if (res.ok) {
+          places = await res.json();
+        } else {
+          throw new Error("HTTP error " + res.status);
+        }
+      } catch (err) {
+        try {
+          const res = await fetch("../data/google-maps-places.json");
+          places = await res.json();
+        } catch (e) {
+          console.warn("Falling back to local static array fetch:", e);
+        }
+      }
+
       render();
+      if (places.length > 0) {
+        selectPlace(places[0].id);
+      }
+    }
+
+    function selectPlace(id) {
+      activePlaceId = id;
+      const item = places.find(p => p.id === id);
+      if (!item) return;
+
+      document.querySelectorAll(".card").forEach(c => {
+        if (c.dataset.id === id) {
+          c.classList.add("active");
+          c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          c.classList.remove("active");
+        }
+      });
+
+      const lat = item.lat || 10.7769;
+      const lng = item.lng || 106.7009;
+
+      document.getElementById("map-target-title").innerText = `📍 ${item.name} (${item.district})`;
+      document.getElementById("map-target-coords").innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+      marker.setLatLng([lat, lng]);
+      map.flyTo([lat, lng], 16);
+    }
+
+    async function updateActivePlaceCoords(lat, lng, source = "manual") {
+      if (!activePlaceId) return;
+      const item = places.find(p => p.id === activePlaceId);
+      if (!item) return;
+
+      lat = Number(parseFloat(lat).toFixed(6));
+      lng = Number(parseFloat(lng).toFixed(6));
+
+      item.lat = lat;
+      item.lng = lng;
+      item.geocodeSource = source;
+      item.isVerified = true;
+
+      document.getElementById("map-target-coords").innerText = `${lat}, ${lng}`;
+
+      // Update card UI directly
+      const card = document.querySelector(`.card[data-id="${activePlaceId}"]`);
+      if (card) {
+        const latInput = card.querySelector(".input-lat");
+        const lngInput = card.querySelector(".input-lng");
+        if (latInput) latInput.value = lat;
+        if (lngInput) lngInput.value = lng;
+
+        const badge = card.querySelector(".card-badge");
+        if (badge) {
+          badge.className = "card-badge";
+          badge.innerText = "✓ " + source;
+        }
+
+        const statusMsg = card.querySelector(".status-msg");
+        if (statusMsg) {
+          statusMsg.className = "status-msg show success";
+          statusMsg.innerText = "⏳ Đang lưu server...";
+        }
+      }
+
+      // Sync to server
+      try {
+        const saveRes = await fetch("/api/save-place", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id, lat, lng, source })
+        });
+
+        if (saveRes.ok) {
+          showToast(`✅ Đã lưu "${item.name}" (${lat}, ${lng})`);
+          if (card) {
+            const statusMsg = card.querySelector(".status-msg");
+            if (statusMsg) {
+              statusMsg.className = "status-msg show success";
+              statusMsg.innerText = `✅ Đã lưu: (${lat}, ${lng})`;
+            }
+          }
+        } else {
+          showToast(`❌ Server không phản hồi khi lưu "${item.name}"`, true);
+        }
+      } catch (err) {
+        showToast("⚠️ Không thể kết nối tới server local (file:// mode)", true);
+      }
+
+      updateStats();
+    }
+
+    function updateStats() {
+      const checkFn = typeof isValidHcmcCoordinate === "function" ? isValidHcmcCoordinate : (lat, lng) => lat >= 10.3 && lat <= 11.2;
+      document.getElementById("stat-total").innerText = places.length;
+      document.getElementById("stat-verified").innerText = places.filter(p => checkFn(p.lat, p.lng)).length;
+      document.getElementById("stat-q1").innerText = places.filter(p => (p.district || "").includes("Quận 1")).length;
     }
 
     function render() {
@@ -260,40 +522,77 @@
       grid.innerHTML = "";
 
       const filtered = places.filter(p =>
-        p.name.toLowerCase().includes(filter) ||
-        p.address.toLowerCase().includes(filter) ||
-        p.district.toLowerCase().includes(filter)
+        (p.name || "").toLowerCase().includes(filter) ||
+        (p.address || "").toLowerCase().includes(filter) ||
+        (p.district || "").toLowerCase().includes(filter)
       );
 
-      document.getElementById("stat-total").innerText = places.length;
-      document.getElementById("stat-verified").innerText = places.filter(p => isValidHcmcCoordinate(p.lat, p.lng)).length;
-      document.getElementById("stat-q1").innerText = places.filter(p => p.district.includes("Quận 1")).length;
+      updateStats();
 
-      filtered.forEach((p, idx) => {
+      filtered.forEach((p) => {
         const card = document.createElement("div");
-        card.className = "card";
-        const hasValidCoords = isValidHcmcCoordinate(p.lat, p.lng);
+        card.className = p.id === activePlaceId ? "card active" : "card";
+        card.dataset.id = p.id;
+
+        const checkFn = typeof isValidHcmcCoordinate === "function" ? isValidHcmcCoordinate : (lat, lng) => lat >= 10.3 && lat <= 11.2;
+        const hasValidCoords = checkFn(p.lat, p.lng);
 
         card.innerHTML = `
           <div class="card-header">
             <div>
-              <div class="card-title">${p.name}</div>
-              <div class="card-meta">${p.category} • ${p.district} • ${p.price}</div>
+              <div class="card-title">${escapeHtml(p.name)}</div>
+              <div class="card-meta">${escapeHtml(p.category)} • ${escapeHtml(p.district)} • ${escapeHtml(p.price)}</div>
             </div>
-            <div class="card-badge ${hasValidCoords ? "" : "pending"}">${hasValidCoords ? "✓ " + (p.geocodeSource || "OK") : "Chưa có"}</div>
+            <div class="card-badge ${hasValidCoords ? "" : "pending"}">${hasValidCoords ? "✓ " + escapeHtml(p.geocodeSource || "OK") : "Chưa có"}</div>
           </div>
-          <div class="card-meta">📍 ${p.address}</div>
-          <div class="coord-display">
-            <span>Lat: <strong>${p.lat || 'Chưa có'}</strong></span>
-            <span>Lng: <strong>${p.lng || 'Chưa có'}</strong></span>
+          <div class="card-meta">📍 ${escapeHtml(p.address)}</div>
+          <div class="coord-inputs">
+            <label>Lat:</label>
+            <input type="number" step="0.000001" class="input-lat" value="${p.lat || ''}" placeholder="10.xxx">
+            <label>Lng:</label>
+            <input type="number" step="0.000001" class="input-lng" value="${p.lng || ''}" placeholder="106.xxx">
           </div>
-          <input type="text" class="paste-box" placeholder="Dán link Google Maps hoặc tọa độ..." data-idx="${idx}">
+          <input type="text" class="paste-box" placeholder="Dán link Google Maps hoặc tọa độ raw...">
           <div class="status-msg"></div>
           <div class="btn-row">
-            <button onclick="window.open('${p.googleSearchUrl}', '_blank')">🔍 Mở Google Maps</button>
-            <button class="secondary" onclick="navigator.clipboard.writeText('${p.lat}, ${p.lng}')">📋 Copy Lat/Lng</button>
+            <button class="btn-open">🔍 Google Maps Tab</button>
+            <button class="btn-copy secondary">📋 Chép Lat/Lng</button>
           </div>
         `;
+
+        card.addEventListener("click", (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+          selectPlace(p.id);
+        });
+
+        const btnOpen = card.querySelector(".btn-open");
+        btnOpen.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectPlace(p.id);
+          window.open(p.googleSearchUrl || `https://www.google.com/maps/search/${encodeURIComponent(p.name + ' ' + p.address)}`, "_blank");
+        });
+
+        const btnCopy = card.querySelector(".btn-copy");
+        btnCopy.addEventListener("click", (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(`${p.lat}, ${p.lng}`);
+          showToast(`Đã chép: ${p.lat}, ${p.lng}`);
+        });
+
+        const latInput = card.querySelector(".input-lat");
+        const lngInput = card.querySelector(".input-lng");
+
+        const handleManualInput = () => {
+          const latVal = parseFloat(latInput.value);
+          const lngVal = parseFloat(lngInput.value);
+          if (!isNaN(latVal) && !isNaN(lngVal)) {
+            selectPlace(p.id);
+            updateActivePlaceCoords(latVal, lngVal, "manual_input");
+          }
+        };
+
+        latInput.addEventListener("change", handleManualInput);
+        lngInput.addEventListener("change", handleManualInput);
 
         const input = card.querySelector(".paste-box");
         const statusMsg = card.querySelector(".status-msg");
@@ -306,57 +605,15 @@
             return;
           }
 
-          const parsed = parseGoogleMapsCoordinates(val);
+          const parsed = fallbackParseCoords(val);
           if (parsed) {
-            p.lat = parsed.lat;
-            p.lng = parsed.lng;
-            p.geocodeSource = "google_maps_url";
-            p.isVerified = true;
-
-            // Show local parsing success
-            statusMsg.className = "status-msg show success";
-            statusMsg.innerText = "⏳ Đang lưu vào server...";
-
-            // Persist to server (saves data/google-maps-places.json, geocoded-cache.json, and app.js)
-            try {
-              const saveRes = await fetch("/api/save-place", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: p.id, lat: parsed.lat, lng: parsed.lng, source: "google_maps_url" })
-              });
-
-              if (saveRes.ok) {
-                const resData = await saveRes.json();
-                statusMsg.className = "status-msg show success";
-                statusMsg.innerText = `✅ Đã lưu thành công: (${parsed.lat}, ${parsed.lng})`;
-                showToast(`✅ Đã lưu "${p.name}" (${parsed.lat}, ${parsed.lng})`);
-              } else {
-                statusMsg.className = "status-msg show err";
-                statusMsg.innerText = "❌ Lỗi lưu server";
-                showToast(`❌ Lỗi lưu "${p.name}"`, true);
-              }
-            } catch (err) {
-              statusMsg.className = "status-msg show err";
-              statusMsg.innerText = "❌ Lỗi kết nối server";
-              showToast("❌ Không thể kết nối tới server local", true);
-            }
-
-            // Update UI in place
-            const badge = card.querySelector(".card-badge");
-            badge.className = "card-badge";
-            badge.innerText = "✓ google_maps_url";
-
-            const coordSpan = card.querySelector(".coord-display");
-            coordSpan.innerHTML = `<span>Lat: <strong>${parsed.lat}</strong></span><span>Lng: <strong>${parsed.lng}</strong></span>`;
-
-            input.style.borderColor = "var(--herb)";
-            input.style.background = "#eef7f2";
-
-            // Update header stat count
-            document.getElementById("stat-verified").innerText = places.filter(pl => isValidHcmcCoordinate(pl.lat, pl.lng)).length;
+            selectPlace(p.id);
+            marker.setLatLng([parsed.lat, parsed.lng]);
+            map.flyTo([parsed.lat, parsed.lng], 16);
+            await updateActivePlaceCoords(parsed.lat, parsed.lng, parsed.source || "paste_url");
           } else if (val.length > 5) {
             statusMsg.className = "status-msg show err";
-            statusMsg.innerText = "⚠️ Chưa tìm thấy tọa độ @lat,lng hợp lệ trong link này";
+            statusMsg.innerText = "⚠️ Chưa tìm thấy tọa độ hợp lệ (cần lat: 10.x, lng: 106.x)";
           }
         });
 
@@ -377,7 +634,8 @@
     });
 
     document.getElementById("btn-copy-appjs").addEventListener("click", () => {
-      const appJsArray = JSON.stringify(places, null, 2);
+      const cleanPlaces = places.map(({ googleSearchUrl, searchQuery, rawAddress, isVerified, geocodeSource, ...rest }) => rest);
+      const appJsArray = JSON.stringify(cleanPlaces, null, 2);
       navigator.clipboard.writeText(`const defaultPlaces = ${appJsArray};\n`);
       alert("Đã sao chép mảng defaultPlaces vào bộ nhớ tạm!");
     });

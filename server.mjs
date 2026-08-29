@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, writeFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,14 +40,31 @@ const server = createServer(async (request, response) => {
       filePath = join(root, "index.html");
     }
 
+    // API endpoint to get google maps places
+    if (request.method === "GET" && pathname === "/api/google-maps-places") {
+      try {
+        const placesPath = join(root, "data", "google-maps-places.json");
+        const placesData = await readFile(placesPath, "utf8");
+        response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(placesData);
+      } catch (e) {
+        response.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
     // API endpoint to save manual geocode updates
     if (request.method === "POST" && pathname === "/api/save-place") {
       let body = "";
       request.on("data", chunk => body += chunk);
       request.on("end", async () => {
         try {
-          const { id, lat, lng, source } = JSON.parse(body);
-          if (!id || typeof lat !== "number" || typeof lng !== "number") {
+          const { id, lat: rawLat, lng: rawLng, source } = JSON.parse(body);
+          const lat = typeof rawLat === "number" ? Number(rawLat.toFixed(6)) : parseFloat(rawLat);
+          const lng = typeof rawLng === "number" ? Number(rawLng.toFixed(6)) : parseFloat(rawLng);
+
+          if (!id || isNaN(lat) || isNaN(lng)) {
             response.writeHead(400, { "Content-Type": "application/json" });
             response.end(JSON.stringify({ error: "Invalid params" }));
             return;
@@ -70,7 +87,7 @@ const server = createServer(async (request, response) => {
           let cache = {};
           try { cache = JSON.parse(await readFile(cachePath, "utf8")); } catch {}
           if (item) {
-            const cacheKey = `${item.name} | ${item.rawAddress} | ${item.district}`.toLowerCase();
+            const cacheKey = `${item.name} | ${item.rawAddress || item.address} | ${item.district}`.toLowerCase();
             cache[cacheKey] = { lat, lng, source: source || "manual_url" };
             await writeFile(cachePath, JSON.stringify(cache, null, 2), "utf8");
           }

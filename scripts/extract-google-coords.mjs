@@ -1,9 +1,12 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import XLSX from "xlsx";
+/**
+ * EatWithMe — Google Maps Coordinates Parser & Generator
+ *
+ * Pure utility functions (browser-safe) + Node.js CLI runner
+ */
 
-const CACHE_PATH = "./data/geocoded-cache.json";
-const EXPORT_PATH = "./data/google-maps-places.json";
+// ============================================
+// BROWSER-SAFE UTILITY FUNCTIONS (Zero deps)
+// ============================================
 
 // Bounding box for Greater Ho Chi Minh City
 const HCMC_BOUNDS = {
@@ -14,58 +17,8 @@ const HCMC_BOUNDS = {
 };
 
 /**
- * Extracts coordinates from any Google Maps URL or text snippet.
- * Supports:
- * - /@10.773512,106.702845,17z/
- * - !3d10.773512!4d106.702845
- * - ?q=10.773512,106.702845 or &ll=10.773512,106.702845 or center=10.773512%2C106.702845
+ * Validates if coordinates fall within Greater HCMC bounds
  */
-export function parseGoogleMapsCoordinates(input) {
-  if (!input || typeof input !== "string") return null;
-
-  // 1. Check @lat,lng
-  const atMatch = input.match(/@([0-9.-]+),([0-9.-]+)/);
-  if (atMatch) {
-    const lat = parseFloat(atMatch[1]);
-    const lng = parseFloat(atMatch[2]);
-    if (isValidHcmcCoordinate(lat, lng)) {
-      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "@lat,lng" };
-    }
-  }
-
-  // 2. Check !3d(lat)!4d(lng)
-  const dataMatch = input.match(/!3d([0-9.-]+)!4d([0-9.-]+)/);
-  if (dataMatch) {
-    const lat = parseFloat(dataMatch[1]);
-    const lng = parseFloat(dataMatch[2]);
-    if (isValidHcmcCoordinate(lat, lng)) {
-      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "!3d!4d" };
-    }
-  }
-
-  // 3. Check query parameters ?q=lat,lng or &ll=lat,lng or center=lat%2Clng
-  const paramMatch = input.match(/[?&](?:q|ll|center)=([0-9.-]+)[,%]([0-9.-]+)/);
-  if (paramMatch) {
-    const lat = parseFloat(paramMatch[1]);
-    const lng = parseFloat(paramMatch[2]);
-    if (isValidHcmcCoordinate(lat, lng)) {
-      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "query_param" };
-    }
-  }
-
-  // 4. Check raw lat, lng pair in text (e.g. "10.773512, 106.702845")
-  const rawMatch = input.match(/([1][0-1]\.[0-9]{4,8})[,\s]+([1][0][6-7]\.[0-9]{4,8})/);
-  if (rawMatch) {
-    const lat = parseFloat(rawMatch[1]);
-    const lng = parseFloat(rawMatch[2]);
-    if (isValidHcmcCoordinate(lat, lng)) {
-      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "raw_text" };
-    }
-  }
-
-  return null;
-}
-
 export function isValidHcmcCoordinate(lat, lng) {
   return (
     typeof lat === "number" &&
@@ -79,6 +32,76 @@ export function isValidHcmcCoordinate(lat, lng) {
   );
 }
 
+/**
+ * Extracts coordinates from any Google Maps URL or text snippet.
+ * Supports:
+ * - /@10.773512,106.702845,17z/
+ * - !3d10.773512!4d106.702845
+ * - !4d106.702845!3d10.773512 (reversed order)
+ * - ?q=10.773512,106.702845 or &ll=10.773512,106.702845 or center=10.773512%2C106.702845
+ * - loc:10.773512,106.702845
+ * - 10.773512, 106.702845 (raw text with 2-10 decimals)
+ */
+export function parseGoogleMapsCoordinates(input) {
+  if (!input || typeof input !== "string") return null;
+
+  // 1. Check @lat,lng (most common format in share URLs)
+  const atMatch = input.match(/@([0-9.-]+),([0-9.-]+)/);
+  if (atMatch) {
+    const lat = parseFloat(atMatch[1]);
+    const lng = parseFloat(atMatch[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "@lat,lng" };
+    }
+  }
+
+  // 2. Check !3d(lat)!4d(lng) — standard data parameter
+  const dataMatch = input.match(/!3d([0-9.-]+)!4d([0-9.-]+)/);
+  if (dataMatch) {
+    const lat = parseFloat(dataMatch[1]);
+    const lng = parseFloat(dataMatch[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "!3d!4d" };
+    }
+  }
+
+  // 3. Check reversed order !4d(lng)!3d(lat) — seen in some share links
+  const dataMatchRev = input.match(/!4d([0-9.-]+)!3d([0-9.-]+)/);
+  if (dataMatchRev) {
+    const lng = parseFloat(dataMatchRev[1]);
+    const lat = parseFloat(dataMatchRev[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "!4d!3d" };
+    }
+  }
+
+  // 4. Check query parameters: ?q=lat,lng or &ll=lat,lng or center=lat%2Clng or loc:lat,lng
+  const paramMatch = input.match(/[?&](?:q|ll|center|loc)=([0-9.-]+)[,%]([0-9.-]+)/);
+  if (paramMatch) {
+    const lat = parseFloat(paramMatch[1]);
+    const lng = parseFloat(paramMatch[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "query_param" };
+    }
+  }
+
+  // 5. Check raw lat, lng pair in text with flexible decimal precision (2-10)
+  // Matches: 10.xxx, 106.xxx OR 11.xxx, 106.xxx OR 10.xxx, 107.xxx
+  const rawMatch = input.match(/([1][0-1]\.[0-9]{2,10})[,\s]+([1][0][6-7]\.[0-9]{2,10})/);
+  if (rawMatch) {
+    const lat = parseFloat(rawMatch[1]);
+    const lng = parseFloat(rawMatch[2]);
+    if (isValidHcmcCoordinate(lat, lng)) {
+      return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), source: "raw_text" };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Maps food category to color theme and pin style
+ */
 export function getCategoryTheme(cat) {
   switch (cat) {
     case "Món Nhật": return { color: "bun", pin: "red" };
@@ -100,12 +123,40 @@ export function getCategoryTheme(cat) {
   }
 }
 
-export function parseExcelPlaces() {
+// ============================================
+// NODE.JS CLI FUNCTIONS (Dynamic imports only)
+// ============================================
+
+/**
+ * Parse Excel file and return places array with Google Maps search URLs
+ * Runs ONLY when invoked directly via `node scripts/extract-google-coords.mjs`
+ */
+export async function parseExcelPlaces() {
+  // Dynamic imports — only executed in Node.js CLI context
+  const { readFile } = await import("node:fs/promises");
+  const { existsSync } = await import("node:fs");
+  const XLSX = (await import("xlsx")).default;
+
+  const CACHE_PATH = "./data/geocoded-cache.json";
+
+  async function loadCache() {
+    try {
+      if (existsSync(CACHE_PATH)) {
+        const data = await readFile(CACHE_PATH, "utf8");
+        return JSON.parse(data);
+      }
+    } catch {
+      // ignore
+    }
+    return {};
+  }
+
   const wb = XLSX.readFile("Eat with mi.xlsx");
+  const cache = await loadCache();
   const items = [];
   let idCounter = 1;
 
-  // 1. Process 'quán ăn'
+  // 1. Process 'quán ăn' sheet
   const qaRows = XLSX.utils.sheet_to_json(wb.Sheets['quán ăn'], { header: 1 });
   let currentDistrict = "Quận 1";
 
@@ -132,6 +183,10 @@ export function parseExcelPlaces() {
     const query = [name, rawAddress, currentDistrict, 'TP. HCM'].filter(Boolean).join(', ');
     const googleSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 
+    const cacheKey = `${name} | ${rawAddress} | ${currentDistrict}`.toLowerCase();
+    const cached = cache[cacheKey];
+    const hasCachedCoords = cached && isValidHcmcCoordinate(cached.lat, cached.lng);
+
     items.push({
       id: `place-mi-${idCounter++}`,
       name,
@@ -149,11 +204,15 @@ export function parseExcelPlaces() {
       pin: theme.pin,
       description: note || `Địa điểm ẩm thực ${category} hấp dẫn tại ${currentDistrict}.`,
       googleSearchUrl,
-      searchQuery: query
+      searchQuery: query,
+      lat: hasCachedCoords ? cached.lat : 10.7769,
+      lng: hasCachedCoords ? cached.lng : 106.7009,
+      geocodeSource: hasCachedCoords ? (cached.source || "cache") : "pending",
+      isVerified: hasCachedCoords
     });
   }
 
-  // 2. Process 'nước'
+  // 2. Process 'nước' sheet
   const nuocRows = XLSX.utils.sheet_to_json(wb.Sheets['nước'], { header: 1 });
   currentDistrict = "Quận 1";
 
@@ -178,6 +237,10 @@ export function parseExcelPlaces() {
     const query = [name, rawAddress, currentDistrict, 'TP. HCM'].filter(Boolean).join(', ');
     const googleSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 
+    const cacheKey = `${name} | ${rawAddress} | ${currentDistrict}`.toLowerCase();
+    const cached = cache[cacheKey];
+    const hasCachedCoords = cached && isValidHcmcCoordinate(cached.lat, cached.lng);
+
     items.push({
       id: `place-mi-${idCounter++}`,
       name,
@@ -195,53 +258,34 @@ export function parseExcelPlaces() {
       pin: theme.pin,
       description: note || `Địa điểm Cafe hấp dẫn tại ${currentDistrict}.`,
       googleSearchUrl,
-      searchQuery: query
+      searchQuery: query,
+      lat: hasCachedCoords ? cached.lat : 10.7769,
+      lng: hasCachedCoords ? cached.lng : 106.7009,
+      geocodeSource: hasCachedCoords ? (cached.source || "cache") : "pending",
+      isVerified: hasCachedCoords
     });
   }
 
   return items;
 }
 
-async function loadCache() {
-  try {
-    if (existsSync(CACHE_PATH)) {
-      const data = await readFile(CACHE_PATH, "utf8");
-      return JSON.parse(data);
-    }
-  } catch {
-    // ignore
-  }
-  return {};
-}
+/**
+ * CLI entry point: generate google-maps-places.json
+ */
+export async function main() {
+  const { writeFile, mkdir } = await import("node:fs/promises");
+  const { existsSync } = await import("node:fs");
 
-async function main() {
+  const EXPORT_PATH = "./data/google-maps-places.json";
+
   console.log("🗺️  Google Maps Coordinates Parser & Generator for EatWithMe");
-  const places = parseExcelPlaces();
-  const cache = await loadCache();
-
+  const places = await parseExcelPlaces();
   console.log(`Found ${places.length} places in 'Eat with mi.xlsx'.\n`);
 
   let matchedFromCache = 0;
   const enrichedPlaces = places.map((place) => {
-    const cacheKey = `${place.name} | ${place.rawAddress} | ${place.district}`.toLowerCase();
-    const cached = cache[cacheKey];
-    if (cached && isValidHcmcCoordinate(cached.lat, cached.lng)) {
-      matchedFromCache++;
-      return {
-        ...place,
-        lat: cached.lat,
-        lng: cached.lng,
-        geocodeSource: cached.source || "cache",
-        isVerified: true
-      };
-    }
-    return {
-      ...place,
-      lat: 10.7769,
-      lng: 106.7009,
-      geocodeSource: "pending",
-      isVerified: false
-    };
+    if (place.isVerified) matchedFromCache++;
+    return place;
   });
 
   if (!existsSync("./data")) {
@@ -253,7 +297,7 @@ async function main() {
   console.log(`📊 Verified with coordinates: ${matchedFromCache}/${enrichedPlaces.length}`);
 }
 
-// Only run directly if invoked as main
+// Only run directly if invoked as main (Node.js CLI)
 if (process.argv[1] && process.argv[1].endsWith("extract-google-coords.mjs")) {
   main().catch((err) => {
     console.error("❌ Execution error:", err);
