@@ -3536,15 +3536,9 @@ async function syncFromGoogleDriveOnLogin(user) {
 
 const DEFAULT_MAP_CENTER = [10.7769, 106.7009];
 const MAP_MIN_ZOOM = 11;
-const MAP_MAX_ZOOM = 17;
+const MAP_MAX_ZOOM = 19;
 const MAP_DEFAULT_ZOOM = 13;
 const MAP_LOCATE_ZOOM = 15;
-const CITIES = {
-  hanoi: { name: "Hà Nội", center: [21.0285, 105.8542], zoom: MAP_DEFAULT_ZOOM },
-  hcm: { name: "TP. HCM", center: [10.7769, 106.7009], zoom: MAP_DEFAULT_ZOOM },
-  danang: { name: "Đà Nẵng", center: [16.0544, 108.2022], zoom: MAP_DEFAULT_ZOOM },
-};
-const MAP_TILE_ATTRIBUTION = "EatWithMe · Bản đồ cục bộ (Local Offline Map)";
 
 const FAST_LOCATION_OPTIONS = {
   enableHighAccuracy: false,
@@ -4455,47 +4449,27 @@ function buildInteractiveMap(L) {
   if (!element) return null;
 
   if (mapState.instance) mapState.instance.remove();
-  if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
   mapState.savedMarkers.clear();
-  mapState.tilesLoaded = false;
   mapState.accuracyCircle = null;
 
   const map = L.map(element, {
     zoomControl: false,
-    preferCanvas: true,
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
-    zoomSnap: 0.5,
-    zoomDelta: 0.5,
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // Standard OpenStreetMap Tile Layer (100% Free, Keyless, Public CDN)
-  const osmUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  // CARTO Positron Light Tiles (Clean, Minimalist, 100% Free & Keyless, 180-day CDN cache)
+  const cartoUrl = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
-  const mainTileLayer = L.tileLayer(osmUrl, {
+  const mainTileLayer = L.tileLayer(cartoUrl, {
+    subdomains: "abcd",
     maxZoom: MAP_MAX_ZOOM,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
-  });
-
-  mainTileLayer.on("tileload", () => {
-    mapState.tilesLoaded = true;
-    if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
-  });
-
-  mainTileLayer.on("tileerror", () => {
-    // Fallback to local offline grid if tiles fail to load
-    if (!mapState.tilesLoaded) {
-      createLocalOfflineGridLayer(L).addTo(map);
-    }
+    detectRetina: true,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
   });
 
   mainTileLayer.addTo(map);
-  mapState.tileCheckTimer = window.setTimeout(() => {
-    if (!mapState.tilesLoaded) {
-      createLocalOfflineGridLayer(L).addTo(map);
-    }
-  }, 4000);
 
   map.on("click", (e) => {
     if (mapState.isPickingLocation) {
@@ -4542,11 +4516,6 @@ function buildInteractiveMap(L) {
   updateMapCaption(mapState.userPosition
     ? (isCachedLocationFresh() ? "Vị trí của bạn · bản đồ đã sẵn sàng" : "Vị trí gần đây · đang làm mới vị trí…")
     : saved.length ? `${saved.length} quán đã lưu · chạm marker để xem chi tiết` : "Bạn chưa lưu quán nào");
-  mapState.tileCheckTimer = window.setTimeout(() => {
-    if (mapState.instance === map && !mapState.tilesLoaded) {
-      showMapFallback("Không tải được nền bản đồ · đang dùng bản đồ dự phòng");
-    }
-  }, 5000);
   window.setTimeout(() => map.invalidateSize(), 50);
   return map;
 }

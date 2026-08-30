@@ -39,14 +39,14 @@ The application logic resides primarily in `app.js` (~6,000 lines), organized in
    - Single-direction full app re-renders via `renderApp()`.
    - Delegated action dispatcher `handleAction(event)` switching on `data-action`.
 5. **Map & Geolocation:**
-   - Leaflet 1.9.4 with 100% Local Offline Canvas Tile Layer (`LocalOfflineGridLayer`, zero API keys or external tile servers).
+   - Leaflet 1.9.4 with CARTO Positron Light basemap tiles (100% free & keyless, 180-day CDN caching, retina support).
    - Hybrid geolocation engine with Capacitor Geolocation, browser GPS, and IP fallback.
    - Dynamic Haversine distance calculations.
 
 ### Cache-Busting Protocol (Important)
 Whenever modifying `app.js` or `styles.css`:
-1. Bump the query parameter `?v=NN` in `index.html` on both script and link tags (currently `v74`).
-2. Bump `CACHE_NAME = "eatwithme-shell-vNN"` in `sw.js` to match (currently `v74`).
+1. Bump the query parameter `?v=NN` in `index.html` on both script and link tags (currently `v76`).
+2. Bump `CACHE_NAME = "eatwithme-shell-vNN"` in `sw.js` to match (currently `v76`).
 
 ### Storage & Google Cloud Sync
 User lists (`state.saved` and custom places) are saved in local storage (with IndexedDB mirroring) and auto-synced to the signed-in user's Google Account via Google Drive `appDataFolder` (`eatwithme_user_data.json`).
