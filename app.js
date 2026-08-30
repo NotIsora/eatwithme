@@ -4459,8 +4459,8 @@ function buildInteractiveMap(L) {
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // CARTO Positron Light Tiles (Clean, Minimalist, 100% Free & Keyless, 180-day CDN cache)
-  const cartoUrl = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  // CARTO Voyager Tiles (Clean, Modern, Vibrant & Keyless, 180-day CDN cache)
+  const cartoUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
   const mainTileLayer = L.tileLayer(cartoUrl, {
     subdomains: "abcd",
