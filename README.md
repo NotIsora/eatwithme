@@ -21,10 +21,12 @@ Một ứng dụng web/PWA mobile-first hiện đại giúp bạn tìm kiếm, l
 * **6 phân khúc giá rõ ràng**: `<100k`, `<200k`, `200k-300k`, `<500k`, `500k-800k`, `>1tr`.
 * **Thêm quán ăn bằng tay**: Nhập tên, chọn dạng món, mức giá và ghim trực tiếp theo tọa độ GPS hiện tại hoặc nhập thủ công.
 
-### 2. Lưu trữ Cục bộ (Local-First) & Sao lưu 1-Click
-* **Bảo vệ dữ liệu bền vững**: Kết hợp `LocalStorage` và `IndexedDB` với cơ chế `navigator.storage.persist()` chống trình duyệt tự động dọn dẹp khi đầy bộ nhớ.
+### 2. Đồng Bộ Google Account & Lưu Trữ Cục Bộ (Local-First + Cloud Auto-Sync)
+* **Tự động đồng bộ Google Drive (`appDataFolder`)**: Tự động lưu và đồng bộ danh sách quán ăn yêu thích và quán tự thêm trực tiếp vào thư mục ứng dụng ẩn (`appDataFolder`) trên tài khoản Google của bạn thông qua Google Identity Services (GIS) & Google Drive API.
+* **Tự động hợp nhất dữ liệu (Smart Merge)**: Khi đăng nhập tài khoản Google lần đầu, ứng dụng tự động gộp (union) toàn bộ các quán ăn đã lưu và quán tự thêm từ chế độ khách (Guest) vào tài khoản Google của bạn.
+* **Bảo vệ dữ liệu bền vững**: Kết hợp `LocalStorage` và `IndexedDB` với cơ chế `navigator.storage.persist()` chống trình duyệt tự động dọn dẹp khi đầy bộ nhớ, đảm bảo ứng dụng vẫn hoạt động mượt mà khi ngoại tuyến (Offline-First).
 * **Sao lưu & Phục hồi JSON**: Xuất toàn bộ danh sách quán ăn và hồ sơ ra file `.json` hoặc khôi phục lại bất cứ lúc nào trên mọi thiết bị.
-* **Quyền riêng tư tối đa**: Không gửi dữ liệu quán ăn của bạn lên bất kỳ máy chủ bên thứ ba nào.
+* **Quyền riêng tư tối đa**: Dữ liệu chỉ được lưu trên thiết bị của bạn hoặc Drive riêng của tài khoản Google cá nhân.
 
 ### 3. Chia sẻ nhanh chóng
 * **Sao chép thông tin quán 1-chạm**: Tự động sao chép tên quán và địa chỉ vào clipboard để gửi qua Zalo, Messenger, SMS...
