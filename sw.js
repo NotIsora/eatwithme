@@ -1,6 +1,6 @@
 // Bump this whenever the app shell changes so an older cached app.js cannot
 // hide newly shipped features such as the interactive map.
-const CACHE_NAME = "eatwithme-shell-v67";
+const CACHE_NAME = "eatwithme-shell-v74";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -41,6 +41,10 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const requestUrl = new URL(event.request.url);
+  // Bypass Service Worker caching completely for external Google Auth/Drive endpoints
+  if (requestUrl.hostname.endsWith("google.com") || requestUrl.hostname.endsWith("googleapis.com")) {
+    return;
+  }
   if (NETWORK_FIRST_PATHS.has(requestUrl.pathname)) {
     event.respondWith(
       fetch(event.request).then((response) => {
