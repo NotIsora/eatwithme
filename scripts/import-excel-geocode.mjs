@@ -115,6 +115,42 @@ function isValidCoordinate(lat, lng) {
   );
 }
 
+function parseRowCoordinates(row) {
+  if (!row) return null;
+  const col7 = row[7] !== undefined && row[7] !== null ? String(row[7]).trim() : "";
+  const col8 = row[8] !== undefined && row[8] !== null ? String(row[8]).trim() : "";
+  const col5 = row[5] !== undefined && row[5] !== null ? String(row[5]).trim() : "";
+  const col6 = row[6] !== undefined && row[6] !== null ? String(row[6]).trim() : "";
+
+  // 1. Try combined string "lat, lng" in col7, col8, or col5
+  for (const str of [col7, col8, col5]) {
+    if (str.includes(",")) {
+      const parts = str.split(",");
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+      if (isValidCoordinate(lat, lng)) {
+        return { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+      }
+    }
+  }
+
+  // 2. Try separate col7 (lat) and col8 (lng)
+  const lat7 = parseFloat(col7);
+  const lng8 = parseFloat(col8);
+  if (isValidCoordinate(lat7, lng8)) {
+    return { lat: Number(lat7.toFixed(6)), lng: Number(lng8.toFixed(6)) };
+  }
+
+  // 3. Try separate col5 (lat) and col6 (lng)
+  const lat5 = parseFloat(col5);
+  const lng6 = parseFloat(col6);
+  if (isValidCoordinate(lat5, lng6)) {
+    return { lat: Number(lat5.toFixed(6)), lng: Number(lng6.toFixed(6)) };
+  }
+
+  return null;
+}
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function fetchPhoton(query, biasLat = DEFAULT_MAP_CENTER[0], biasLng = DEFAULT_MAP_CENTER[1]) {
@@ -320,14 +356,19 @@ async function main() {
     const price = row[4] ? String(row[4]).trim() : '<100k';
     const note = row[6] ? String(row[6]).trim() : '';
 
+    const coords = parseRowCoordinates(row);
+
+    if (!coords) {
+      console.log(`[SKIP] ${name} (No valid X,Y in sheet)`);
+      stats.skipped = (stats.skipped || 0) + 1;
+      continue;
+    }
+
     const theme = getCategoryTheme(category);
     const fullAddress = rawAddress ? `${rawAddress}, ${currentDistrict}, TP. HCM` : `${currentDistrict}, TP. HCM`;
 
-    process.stdout.write(`[${idCounter}] Geocoding: ${name} (${rawAddress || currentDistrict})... `);
-    const coords = await geocodePlace(name, rawAddress, currentDistrict, cache);
-    if (coords.fromCache) stats.cached++;
-    stats[coords.source] = (stats[coords.source] || 0) + 1;
-    console.log(`✓ [${coords.source}] (${coords.lat}, ${coords.lng})`);
+    stats.manual = (stats.manual || 0) + 1;
+    console.log(`[${idCounter}] Using sheet X,Y for: ${name} → (${coords.lat}, ${coords.lng})`);
 
     places.push({
       id: `place-mi-${idCounter++}`,
@@ -369,14 +410,19 @@ async function main() {
     const rawAddress = row[2] ? String(row[2]).trim() : '';
     const note = row[4] ? String(row[4]).trim() : '';
 
+    const coords = parseRowCoordinates(row);
+
+    if (!coords) {
+      console.log(`[SKIP] ${name} (No valid X,Y in sheet)`);
+      stats.skipped = (stats.skipped || 0) + 1;
+      continue;
+    }
+
     const theme = getCategoryTheme("Cafe");
     const fullAddress = rawAddress ? `${rawAddress}, ${currentDistrict}, TP. HCM` : `${currentDistrict}, TP. HCM`;
 
-    process.stdout.write(`[${idCounter}] Geocoding: ${name} (${rawAddress || currentDistrict})... `);
-    const coords = await geocodePlace(name, rawAddress, currentDistrict, cache);
-    if (coords.fromCache) stats.cached++;
-    stats[coords.source] = (stats[coords.source] || 0) + 1;
-    console.log(`✓ [${coords.source}] (${coords.lat}, ${coords.lng})`);
+    stats.manual = (stats.manual || 0) + 1;
+    console.log(`[${idCounter}] Using sheet X,Y for: ${name} → (${coords.lat}, ${coords.lng})`);
 
     places.push({
       id: `place-mi-${idCounter++}`,
@@ -401,13 +447,9 @@ async function main() {
   await saveCache(cache);
 
   console.log("\n================ Geocoding Summary ================");
-  console.log(`Total places processed: ${places.length}`);
-  console.log(`- Landmark exact:      ${stats.landmark || 0}`);
-  console.log(`- Photon (OSM fast):    ${stats.photon || 0}`);
-  console.log(`- Nominatim (OSM full): ${stats.nominatim || 0}`);
-  console.log(`- ESRI World:           ${stats.esri || 0}`);
-  console.log(`- District fallback:    ${stats.district_fallback || 0}`);
-  console.log(`- Loaded from Cache:    ${stats.cached || 0}`);
+  console.log(`Total places outputted: ${places.length}`);
+  console.log(`- Valid sheet X,Y:     ${stats.manual || 0}`);
+  console.log(`- Skipped (no X,Y):    ${stats.skipped || 0}`);
   console.log("===================================================\n");
 
   // Update app.js

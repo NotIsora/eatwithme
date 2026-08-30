@@ -633,11 +633,15 @@
       downloadAnchor.remove();
     });
 
-    document.getElementById("btn-copy-appjs").addEventListener("click", () => {
-      const cleanPlaces = places.map(({ googleSearchUrl, searchQuery, rawAddress, isVerified, geocodeSource, ...rest }) => rest);
-      const appJsArray = JSON.stringify(cleanPlaces, null, 2);
-      navigator.clipboard.writeText(`const defaultPlaces = ${appJsArray};\n`);
-      alert("Đã sao chép mảng defaultPlaces vào bộ nhớ tạm!");
+    document.getElementById("btn-copy-appjs").addEventListener("click", async () => {
+      try {
+        const cleanPlaces = places.map(({ googleSearchUrl, searchQuery, rawAddress, isVerified, geocodeSource, ...rest }) => rest);
+        const appJsArray = JSON.stringify(cleanPlaces, null, 2);
+        await navigator.clipboard.writeText(`const defaultPlaces = ${appJsArray};\n`);
+        showToast("📋 Đã sao chép mảng defaultPlaces vào bộ nhớ tạm!");
+      } catch (err) {
+        showToast("❌ Không thể sao chép vào bộ nhớ tạm: " + err.message, true);
+      }
     });
 
     init();

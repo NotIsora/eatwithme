@@ -45,8 +45,11 @@ The application logic resides primarily in `app.js` (~6,000 lines), organized in
 
 ### Cache-Busting Protocol (Important)
 Whenever modifying `app.js` or `styles.css`:
-1. Bump the query parameter `?v=NN` in `index.html` on both script and link tags.
-2. Bump `CACHE_NAME = "eatwithme-shell-vNN"` in `sw.js` to match.
+1. Bump the query parameter `?v=NN` in `index.html` on both script and link tags (currently `v74`).
+2. Bump `CACHE_NAME = "eatwithme-shell-vNN"` in `sw.js` to match (currently `v74`).
+
+### Storage & Google Cloud Sync
+User lists (`state.saved` and custom places) are saved in local storage (with IndexedDB mirroring) and auto-synced to the signed-in user's Google Account via Google Drive `appDataFolder` (`eatwithme_user_data.json`).
 
 ### Conventions & Style
 - **Vietnamese UI Only:** All labels, placeholders, toasts, and descriptions are in Vietnamese.
