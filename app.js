@@ -4459,14 +4459,12 @@ function buildInteractiveMap(L) {
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // CARTO Voyager Tiles (Clean, Modern, Vibrant & Keyless, 180-day CDN cache)
-  const cartoUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  // Esri World Topo Map (Clean, Free, 100% Keyless, Zero Auth Requirements)
+  const esriUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}";
 
-  const mainTileLayer = L.tileLayer(cartoUrl, {
-    subdomains: "abcd",
+  const mainTileLayer = L.tileLayer(esriUrl, {
     maxZoom: MAP_MAX_ZOOM,
-    detectRetina: true,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+    attribution: 'Tiles &copy; <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer" target="_blank" rel="noopener noreferrer">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
   });
 
   mainTileLayer.addTo(map);
