@@ -4470,27 +4470,27 @@ function buildInteractiveMap(L) {
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // Stadia Stamen Terrain / OpenStreetMap Colorful Tile Layer (High Detail Vietnam, Vibrant Colors, Free & Keyless)
-  const stamenTerrainUrl = "https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png";
+  // Standard OpenStreetMap Tile Layer (100% Free, Keyless, Public CDN)
+  const osmUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-  const stamenTileLayer = L.tileLayer(stamenTerrainUrl, {
+  const mainTileLayer = L.tileLayer(osmUrl, {
     maxZoom: MAP_MAX_ZOOM,
-    attribution: '&copy; <a href="https://stadiamaps.com/" target="_blank" rel="noopener noreferrer">Stadia Maps</a> &copy; <a href="https://stamen.com/" target="_blank" rel="noopener noreferrer">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
   });
 
-  stamenTileLayer.on("tileload", () => {
+  mainTileLayer.on("tileload", () => {
     mapState.tilesLoaded = true;
     if (mapState.tileCheckTimer) window.clearTimeout(mapState.tileCheckTimer);
   });
 
-  stamenTileLayer.on("tileerror", () => {
+  mainTileLayer.on("tileerror", () => {
     // Fallback to local offline grid if tiles fail to load
     if (!mapState.tilesLoaded) {
       createLocalOfflineGridLayer(L).addTo(map);
     }
   });
 
-  stamenTileLayer.addTo(map);
+  mainTileLayer.addTo(map);
   mapState.tileCheckTimer = window.setTimeout(() => {
     if (!mapState.tilesLoaded) {
       createLocalOfflineGridLayer(L).addTo(map);
