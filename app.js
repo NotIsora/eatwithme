@@ -4038,8 +4038,6 @@ function renderMap() {
       </div>
       <div id="leaflet-map" class="leaflet-map" aria-label="Bản đồ các quán đã lưu"></div>
       ${renderMapFallback()}
-      <div id="map-location-caption" class="map-location-caption">Đang chuẩn bị bản đồ tương tác…</div>
-      <div class="map-legend"><span class="legend-dot"></span>Quán đã lưu <span class="legend-dot herb"></span>Vị trí của bạn</div>
     </section>`;
 }
 
@@ -4457,7 +4455,6 @@ function buildInteractiveMap(L) {
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
-  L.control.zoom({ position: "bottomright" }).addTo(map);
 
   // Esri World Topo Map (Clean, Free, 100% Keyless, Zero Auth Requirements)
   const esriUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}";
@@ -4840,7 +4837,7 @@ function startLocationPrefetch() {
               accuracy,
             });
             const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí theo Wi-Fi";
-            updateMapCaption(`${label} · độ chuẩn ±${Math.round(accuracy || 10)}m`);
+            updateMapCaption("");
           }
         },
       });
@@ -4861,7 +4858,7 @@ function startLocationPrefetch() {
       });
       if (mapState.instance) {
         renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
-        updateMapCaption(`Vị trí khu vực (${escapeHtml(ip.city)})`);
+        updateMapCaption("");
       }
       return { position: { coords: { latitude: ip.lat, longitude: ip.lng } }, fast: true };
     }
@@ -4899,9 +4896,9 @@ async function locateDevice({ silent = false } = {}) {
 
   if (mapState.userPosition) {
     renderUserMarkerOnMap(mapState.userPosition, { refining: true, precise: false, animate: !silent });
-    updateMapCaption("Đang làm mịn tín hiệu vị trí…");
+    updateMapCaption("");
   } else {
-    updateMapCaption("Đang tìm tín hiệu GPS & Wi-Fi…");
+    updateMapCaption("");
   }
 
   try {
@@ -4925,7 +4922,7 @@ async function locateDevice({ silent = false } = {}) {
         });
         setLocateButtonState("located", { accuracy });
         const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí theo Wi-Fi/Mạng";
-        updateMapCaption(`${label} · độ chuẩn ±${Math.round(accuracy || 10)}m`);
+        updateMapCaption("");
       },
     });
 
@@ -4938,7 +4935,7 @@ async function locateDevice({ silent = false } = {}) {
       mapState.instance.setView(pt, MAP_LOCATE_ZOOM, { animate: true });
       setLocateButtonState("located", { accuracy });
       const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
-      updateMapCaption(`${label} (độ chuẩn ±${Math.round(accuracy || 10)}m) · bản đồ đã sẵn sàng`);
+      updateMapCaption("");
       if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
       // Re-render place cards to update dynamic distance labels
       requestAnimationFrame(() => {
@@ -4964,11 +4961,11 @@ async function locateDevice({ silent = false } = {}) {
       if (err?.code === 1) {
         setLocateButtonState("error");
         const msg = "Nhấn biểu tượng cài đặt trên thanh địa chỉ và chọn Cho phép Vị trí để bật GPS";
-        updateMapCaption(`Chưa cấp quyền GPS · đang hiển thị khu vực ${escapeHtml(ip.city)}`);
+        updateMapCaption("Chưa cấp quyền GPS");
         if (!silent) showToast(msg, "error");
       } else {
         setLocateButtonState("idle");
-        updateMapCaption(`Vị trí khu vực ${escapeHtml(ip.city)} · bản đồ đã sẵn sàng`);
+        updateMapCaption("");
         if (!silent) showToast(`Đã định vị khu vực ${ip.city}`, "success");
       }
     }
