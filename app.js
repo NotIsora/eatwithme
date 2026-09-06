@@ -4454,6 +4454,10 @@ function buildInteractiveMap(L) {
     zoomControl: false,
     minZoom: MAP_MIN_ZOOM,
     maxZoom: MAP_MAX_ZOOM,
+    fadeAnimation: true,
+    zoomAnimation: true,
+    markerZoomAnimation: true,
+    preferCanvas: true,
   }).setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
 
   // Esri World Topo Map (Clean, Free, 100% Keyless, Zero Auth Requirements)
@@ -4489,9 +4493,9 @@ function buildInteractiveMap(L) {
 
   // Keep map focused on default center unless user requested locate
   if (mapState.hasLocatedUser && mapState.userPosition) {
-    map.setView(mapState.userPosition, MAP_LOCATE_ZOOM);
+    map.flyTo(mapState.userPosition, MAP_LOCATE_ZOOM, { animate: true, duration: 0.8 });
   } else {
-    map.setView(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM);
+    map.flyTo(DEFAULT_MAP_CENTER, MAP_DEFAULT_ZOOM, { animate: true, duration: 0.8 });
   }
 
   mapState.instance = map;
@@ -4661,7 +4665,7 @@ function renderUserMarkerOnMap(point, { refining = false, precise = false, anima
   }
 
   if (animate) {
-    mapState.instance.panTo(point, { animate: true, duration: 0.45 });
+    mapState.instance.flyTo(point, mapState.instance.getZoom(), { animate: true, duration: 0.6 });
   }
 }
 
@@ -4932,7 +4936,7 @@ async function locateDevice({ silent = false } = {}) {
       mapState.userPosition = pt;
       mapState.hasLocatedUser = true;
       renderUserMarkerOnMap(pt, { refining: false, precise: true, animate: true, accuracy });
-      mapState.instance.setView(pt, MAP_LOCATE_ZOOM, { animate: true });
+      mapState.instance.flyTo(pt, MAP_LOCATE_ZOOM, { animate: true, duration: 0.8 });
       setLocateButtonState("located", { accuracy });
       const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
       updateMapCaption("");
@@ -4956,7 +4960,7 @@ async function locateDevice({ silent = false } = {}) {
       const pt = [ip.lat, ip.lng];
       mapState.userPosition = pt;
       renderUserMarkerOnMap(pt, { refining: false, precise: false, animate: true });
-      mapState.instance.setView(pt, MAP_DEFAULT_ZOOM, { animate: true });
+      mapState.instance.flyTo(pt, MAP_DEFAULT_ZOOM, { animate: true, duration: 0.8 });
 
       if (err?.code === 1) {
         setLocateButtonState("error");
@@ -5585,7 +5589,7 @@ function submitNewPlace() {
       .addTo(mapState.instance)
       .bindPopup(mapPopupHtml(newPlace), { maxWidth: 230 });
     mapState.savedMarkers.set(newPlace.id, marker);
-    mapState.instance.setView([newPlace.lat, newPlace.lng], MAP_LOCATE_ZOOM, { animate: true });
+    mapState.instance.flyTo([newPlace.lat, newPlace.lng], MAP_LOCATE_ZOOM, { animate: true, duration: 0.8 });
     marker.openPopup();
   }
 
