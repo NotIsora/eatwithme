@@ -3917,11 +3917,9 @@ function placeCard(place, { compact = false } = {}) {
         <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
           ${categoryBadge(place.category)}
           ${priceBadge(place.price || "<100k")}
-          <span style="font-size:11.5px;color:var(--ink-muted);margin-left:auto;font-weight:700;">★ ${escapeHtml(place.rating)}</span>
         </div>
         <h3 data-action="open-place" data-place-id="${place.id}" style="cursor:pointer;">${escapeHtml(place.name)}</h3>
-        <p>${escapeHtml(place.address)} · <strong>${escapeHtml(getPlaceDistanceText(place))}</strong></p>
-        ${statusLabel(place)}
+        <p>${escapeHtml(place.address)}</p>
       </div>
       <div class="place-actions">
         <button class="round-button ${saved ? "saved delete-btn" : ""}" data-action="toggle-save" data-place-id="${place.id}" title="${saved ? "Xóa khỏi danh sách" : "Lưu quán"}" aria-label="${saved ? "Xóa" : "Lưu"} ${escapeHtml(place.name)}">
@@ -4941,19 +4939,6 @@ async function locateDevice({ silent = false } = {}) {
       const label = accuracy <= 30 ? "Vị trí GPS chính xác" : "Vị trí Wi-Fi chuẩn";
       updateMapCaption("");
       if (!silent) showToast(`Đã định vị thành công (±${Math.round(accuracy || 10)}m)`, "success");
-      // Re-render place cards to update dynamic distance labels
-      requestAnimationFrame(() => {
-        if (state.view === "explore" || state.view === "saved") {
-          document.querySelectorAll(".place-card[data-place-id]").forEach((card) => {
-            const id = card.dataset.placeId;
-            const place = places.find((p) => p.id === id);
-            if (place) {
-              const distEl = card.querySelector(".place-copy p strong");
-              if (distEl) distEl.textContent = getPlaceDistanceText(place);
-            }
-          });
-        }
-      });
     } else {
       const err = streamResult?.error;
       const ip = await fetchIpLocation();
@@ -5625,8 +5610,6 @@ function renderPlaceModal(placeId) {
           <h2>${escapeHtml(place.name)}</h2>
           <p class="muted">${escapeHtml(place.address)}</p>
           <div class="detail-grid">
-            <div class="detail-item"><span>Trạng thái hôm nay</span><strong>${place.status === "open" ? `Đang mở · đóng lúc ${escapeHtml(place.closes)}` : `Đã đóng · ${escapeHtml(place.closes)}`}</strong></div>
-            <div class="detail-item"><span>Đánh giá cộng đồng</span><strong>★ ${escapeHtml(place.rating)} · ${escapeHtml(getPlaceDistanceText(place))}</strong></div>
             <div class="detail-item"><span>Giờ phục vụ</span><strong>${escapeHtml(place.hours)}</strong></div>
           </div>
           <p class="muted" style="font-size:13px">${escapeHtml(place.description)}</p>
